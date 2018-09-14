@@ -251,12 +251,15 @@ public:
   void timeStepping() override
   {
     // Reset all the shapes to be Blue
+    // lesson 1-a
     for(std::size_t i = 0; i < mPendulum->getNumBodyNodes(); ++i)
     {
       BodyNode* bn = mPendulum->getBodyNode(i);
       auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
-      for(std::size_t j = 0; j < 2; ++j)
-        visualShapeNodes[j]->getVisualAspect()->setColor(dart::Color::Blue());
+      //for(std::size_t j = 0; j < 1; ++j)
+        visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
+        visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
+
 
       // If we have three visualization shapes, that means the arrow is
       // attached. We should remove it in case this body is no longer
