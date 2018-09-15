@@ -217,6 +217,7 @@ void SimWindow::keyboard(unsigned char _key, int _x, int _y) {
       mSimulating = !mSimulating;
       if (mSimulating)
         mPlay = false;
+      std::cout<<"SPACE BAR entered"<<std::endl;
       break;
     case 'p':  // playBack
       mPlay = !mPlay;

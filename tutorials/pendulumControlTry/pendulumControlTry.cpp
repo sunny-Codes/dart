@@ -50,8 +50,18 @@ const double delta_stiffness = 10;
 const double default_damping = 5.0;
 const double delta_damping = 1.0;
 
+// desried 
+const double desired_height = 1.0; // m
+const double desired_width = 0.2;  // m
+const double desired_depth = 0.2;  // m
+const double desired_rest_position = 0.0;
+const Eigen::Vector3d desired_1(10,10,10);
+const Eigen::Vector3d desired_2(10,10,10);
+const Eigen::Vector3d desired_1(10,10,10);
+
 using namespace dart::dynamics;
 using namespace dart::simulation;
+using namespace std;
 
 class MyWindow : public dart::gui::SimWindow
 {
@@ -110,7 +120,7 @@ public:
     {
       DegreeOfFreedom* dof = mPendulum->getDof(i);
       double q0 = dof->getRestPosition() + delta;
-
+      cout<<i<<"\t"<<dof->getRestPosition()<<"\t"<<q0<<endl;
       // The system becomes numerically unstable when the rest position exceeds
       // 90 degrees
       if(std::abs(q0) > 90.0 * M_PI / 180.0)
@@ -120,8 +130,8 @@ public:
     }
 
     // Only curl up along one axis in the BallJoint
-    mPendulum->getDof(0)->setRestPosition(0.0);
-    //mPendulum->getDof(2)->setRestPosition(0.0);
+    // mPendulum->getDof(0)->setRestPosition(0.0);
+    // mPendulum->getDof(2)->setRestPosition(0.0);
   }
 
   void changeStiffness(double delta)
@@ -151,6 +161,7 @@ public:
   /// Add a constraint to attach the final link to the world
   void addConstraint()
   {
+    cout<<"addConstraint entered"<<endl;
     // Get the last body in the pendulum
     BodyNode* tip  = mPendulum->getBodyNode(mPendulum->getNumBodyNodes() - 1);
 
@@ -165,6 +176,7 @@ public:
   /// Remove any existing constraint, allowing the pendulum to flail freely
   void removeConstraint()
   {
+    cout<<"removeConstraint entered"<<endl;
     mWorld->getConstraintSolver()->removeConstraint(mBallConstraint);
     mBallConstraint = nullptr;
   }
@@ -342,11 +354,11 @@ protected:
   bool mBodyForce;
 };
 
-void setGeometry(const BodyNodePtr& bn)
+void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth=default_depth, float _height=default_height)
 {
   // Create a BoxShape to be used for both visualization and collision checking
   std::shared_ptr<BoxShape> box(new BoxShape(
-      Eigen::Vector3d(default_width, default_depth, default_height)));
+      Eigen::Vector3d(_width, _depth,_height)));
 
   // Create a shape node for visualization and collision checking
   auto shapeNode
@@ -355,7 +367,7 @@ void setGeometry(const BodyNodePtr& bn)
 
   // Set the location of the shape node
   Eigen::Isometry3d box_tf(Eigen::Isometry3d::Identity());
-  Eigen::Vector3d center = Eigen::Vector3d(0, 0, default_height / 2.0);
+  Eigen::Vector3d center = Eigen::Vector3d(0, 0, _height / 2.0);
   box_tf.translation() = center;
   shapeNode->setRelativeTransform(box_tf);
 
@@ -409,7 +421,7 @@ BodyNode* makeRootBody(const SkeletonPtr& pendulum, const std::string& name)
   */
 
   // Set the geometry of the Body
-  setGeometry(bn);
+  //setGeometry(bn);
 
   return bn;
 }
@@ -422,6 +434,7 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   properties.mName = name + "_joint";
   properties.mAxis = Eigen::Vector3d::UnitY();
   properties.mT_ParentBodyToJoint.translation() =
+     // Eigen::Vector3d::Identity();
       Eigen::Vector3d(0, 0, default_height);
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
@@ -451,13 +464,37 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   return bn;
 }
 
+/*
+SkeletonPtr createBall()
+{
+  SkeletonPtr ball = Skeleton::create("rigid_ball");
+
+  // Give the ball a body
+  addRigidBody<FreeJoint>(ball, "rigid ball", Shape::ELLIPSOID);
+
+  setAllColors(ball, dart::Color::Red());
+  
+  // Set the starting position for the object
+  Eigen::Vector6d positions(Eigen::Vector6d::Zero());
+  positions[4]=10;
+  positions[5]=20;
+  ball->getJoint(0)->setPositions(positions);
+
+  return ball;
+}
+*/
+
+
 int main(int argc, char* argv[])
 {
   // Create an empty Skeleton with the name "pendulum"
   SkeletonPtr pendulum = Skeleton::create("pendulum");
 
   // Add each body to the last BodyNode in the pendulum
-  BodyNode* bn = makeRootBody(pendulum, "body1");
+  //BodyNode* bn = makeRootBody(pendulum, "body1");
+
+  BodyNode* bn= addBody(pendulum, nullptr, "body1");
+
   bn = addBody(pendulum, bn, "body2");
   bn = addBody(pendulum, bn, "body3");
   bn = addBody(pendulum, bn, "body4");
@@ -467,22 +504,25 @@ int main(int argc, char* argv[])
   // starts to swing right away
   pendulum->getDof(1)->setPosition(120 * M_PI / 180.0);
 
-  /*
+  // Create a goal point (ball)
+  // SkeletonPtr g_ball= createBall();
+
   // Create a goal pendulum
-  SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
-  BodyNode* g_bn = makeRootBody(pendulum, "goal_body1");
-  g_bn = addBody(pendulum, g_bn, "goal_body2");
-  g_bn = addBody(pendulum, g_bn, "goal_body3");
-  g_bn = addBody(pendulum, g_bn, "goal_body4");
-  g_bn = addBody(pendulum, g_bn, "goal_body5");
-  g_pendulum->getDof(1)->setPosition(120 * M_PI / 180.0);
-  */
+/*  SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
+  BodyNode* g_bn = addBody(g_pendulum, nullptr, "goal_body1");
+  g_bn = addBody(g_pendulum, g_bn, "goal_body2");
+  g_bn = addBody(g_pendulum, g_bn, "goal_body3");
+  g_bn = addBody(g_pendulum, g_bn, "goal_body4");
+  g_bn = addBody(g_pendulum, g_bn, "goal_body5");
+  g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+*/
 
   // Create a world and add the pendulum to the world
   //WorldPtr world = World::create();
   WorldPtr world= std::make_shared<World>();
   world->addSkeleton(pendulum);
-
+//   world->addSkeleton(g_pendulum);
+  // world->addSkeleton(g_ball);  
   // Create a window for rendering the world and handling user input
   MyWindow window(world);
 
