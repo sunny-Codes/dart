@@ -56,12 +56,12 @@ const double desired_width = 0.2;  // m
 const double desired_depth = 0.2;  // m
 const double desired_rest_position = 0.0;
 
-// goal position
-double goalPos[]={100 * M_PI, 0, 0, 0};
-
 using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace std;
+using namespace Eigen;
+// goal position
+VectorXd goalPos(5);
 
 class MyWindow : public dart::gui::SimWindow
 {
@@ -89,6 +89,10 @@ public:
              Eigen::Vector3d(-default_height, 0.0, default_height / 2.0),
              Eigen::Vector3d(-default_width / 2.0, 0.0, default_height / 2.0),
              arrow_properties, dart::Color::Orange(1.0)));
+
+    // Set PD control gains
+    mKpPD = 200.0;
+    mKdPD = 20.0;
   }
 
   void changeDirection()
@@ -180,6 +184,33 @@ public:
     mWorld->getConstraintSolver()->removeConstraint(mBallConstraint);
     mBallConstraint = nullptr;
   }
+
+  void setPDForces()
+  {
+    if(nullptr == mPendulum)
+      return;
+
+    // Compute the joint position error
+    Eigen::VectorXd q = mPendulum->getPositions();
+    Eigen::VectorXd dq = mPendulum->getVelocities();
+    q += dq * mPendulum->getTimeStep();
+
+    Eigen::VectorXd q_err = goalPos - q;
+
+    // Compute the joint velocity error
+    Eigen::VectorXd dq_err = -dq;
+
+    // Compute the joint forces needed to compensate for Coriolis forces and
+    // gravity
+    const Eigen::VectorXd& Cg = mPendulum->getCoriolisAndGravityForces();
+
+    // Compute the desired joint forces
+    const Eigen::MatrixXd& M = mPendulum->getMassMatrix();
+    mForces = M * (mKpPD * q_err + mKdPD * dq_err) + Cg;
+
+    mPendulum->setForces(mForces);
+  }
+
 
   /// Handle keyboard input
   void keyboard(unsigned char key, int x, int y) override
@@ -355,6 +386,17 @@ protected:
   /// True if 1-9 should be used to apply a body force. Otherwise, 1-9 will be
   /// used to apply a joint torque.
   bool mBodyForce;
+
+  /// Control gains for the proportional error terms in the PD controller
+  double mKpPD;
+
+  /// Control gains for the derivative error terms in the PD controller
+  double mKdPD;
+  
+  /// Joint forces for the manipulator (output of the Controller)
+  Eigen::VectorXd mForces;
+
+
 };
 
 void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth=default_depth, float _height=default_height)
@@ -506,7 +548,10 @@ void print_Skeleton(SkeletonPtr skel){
 
 int main(int argc, char* argv[])
 {
-  // Create an empty Skeleton with the name "pendulum"
+goalPos << 100 * M_PI /180.0, 0.0, 0.0, 0.0, 0.0;
+
+
+    // Create an empty Skeleton with the name "pendulum"
   SkeletonPtr pendulum = Skeleton::create("pendulum");
 
   // Add each body to the last BodyNode in the pendulum
@@ -542,7 +587,7 @@ int main(int argc, char* argv[])
   //WorldPtr world = World::create();
   WorldPtr world= std::make_shared<World>();
   world->addSkeleton(pendulum);
-   world->addSkeleton(g_pendulum);
+  world->addSkeleton(g_pendulum);
   // world->addSkeleton(g_ball);  
   // Create a window for rendering the world and handling user input
   MyWindow window(world);
