@@ -58,6 +58,7 @@ using namespace dart::common;
 using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace dart::math;
+using namespace std;
 
 class Controller
 {
@@ -68,10 +69,9 @@ public:
   {
     // Grab the current joint angles to use them as desired angles
     mQDesired = mManipulator->getPositions();
-
+    cout<<"mQDesired:"<<mQDesired<<endl;
     // Grab the last body in the manipulator, and use it as an end effector
     mEndEffector = mManipulator->getBodyNode(mManipulator->getNumBodyNodes() - 1);
-
     // Compute the body frame offset for the end effector
     mOffset = default_endeffector_offset * Eigen::Vector3d::UnitX();
 
