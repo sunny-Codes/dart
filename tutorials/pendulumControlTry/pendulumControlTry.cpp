@@ -71,7 +71,8 @@ public:
   MyWindow(WorldPtr world)
     : mBallConstraint(nullptr),
       mPositiveSign(true),
-      mBodyForce(false)
+      mBodyForce(false),
+      mPD(false)
   {
     setWorld(world);
 
@@ -193,7 +194,7 @@ public:
     // Compute the joint position error
     Eigen::VectorXd q = mPendulum->getPositions();
     Eigen::VectorXd dq = mPendulum->getVelocities();
-    q += dq * mPendulum->getTimeStep();
+    //q += dq * mPendulum->getTimeStep();
 
     Eigen::VectorXd q_err = goalPos - q;
 
@@ -249,7 +250,9 @@ public:
         applyForce(8);
         break;
       case '0':
-        applyForce(9);
+        mPD= !mPD;
+        //setPDForces();
+        //applyForce(9);
         break;
 
       case 'q':
@@ -313,6 +316,12 @@ public:
         visualShapeNodes[2]->remove();
       }
     }
+    
+    
+    if(mPD){
+        setPDForces();
+    }
+
 
     if(!mBodyForce)
     {
@@ -358,7 +367,8 @@ public:
         }
       }
     }
-
+    
+    
     // Step the simulation forward
     SimWindow::timeStepping();
     for (int i=0;i<4;i++){
@@ -396,6 +406,8 @@ protected:
   /// Joint forces for the manipulator (output of the Controller)
   Eigen::VectorXd mForces;
 
+  // True if using PD control (change by '0' keyboard)
+  bool mPD; 
 
 };
 
@@ -609,6 +621,6 @@ goalPos << 100 * M_PI /180.0, 0.0, 0.0, 0.0, 0.0;
 
   // Initialize glut, initialize the window, and begin the glut event loop
   glutInit(&argc, argv);
-  window.initWindow(640, 480, "Multi-Pendulum Tutorial");
+  window.initWindow(1080, 810, "Multi-Pendulum Tutorial");
   glutMainLoop();
 }
