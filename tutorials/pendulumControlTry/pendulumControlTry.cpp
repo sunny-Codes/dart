@@ -62,6 +62,10 @@ using namespace std;
 using namespace Eigen;
 // goal position
 VectorXd goalPos(5);
+VectorXd goalPos_1(5);
+VectorXd goalPos_2(5);
+VectorXd goalPos_3(5);
+
 
 class MyWindow : public dart::gui::SimWindow
 {
@@ -253,6 +257,15 @@ public:
         mPD= !mPD;
         //setPDForces();
         //applyForce(9);
+        break;
+      case 'z':
+        goalPos= goalPos_1;
+        break;
+      case 'x':
+        goalPos= goalPos_2;
+        break;
+      case 'c':
+        goalPos= goalPos_3;
         break;
 
       case 'q':
@@ -560,7 +573,12 @@ void print_Skeleton(SkeletonPtr skel){
 
 int main(int argc, char* argv[])
 {
-goalPos << 100 * M_PI /180.0, 0.0, 0.0, 0.0, 0.0;
+
+    goalPos_1 << 100 * M_PI /180.0, 0.0, 0.0, 0.0, 0.0;
+    goalPos_2 << 150 * M_PI /180.0, 90*M_PI/180.0, 30*M_PI/180.0, 0.0, 0.0;
+    goalPos_3 << 60 * M_PI /180.0, 0.0, 0.0, 150*M_PI/180.0, 45*M_PI/180;
+    goalPos= goalPos_1;
+
 
 
     // Create an empty Skeleton with the name "pendulum"
