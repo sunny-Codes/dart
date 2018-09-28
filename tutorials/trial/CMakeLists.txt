@@ -5,7 +5,7 @@ if(DART_IN_SOURCE_BUILD)
   return()
 endif()
 
-project(pendulumControlTry)
+project(trial)
 
 find_package(DART 6.6.0 REQUIRED COMPONENTS collision-bullet utils-urdf gui CONFIG)
 

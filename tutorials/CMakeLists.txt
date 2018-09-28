@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8.12)
 
 project(dart-tutorials)
 
+add_subdirectory(trial)
+add_subdirectory(pendulumControlTry)
 add_subdirectory(tutorialBiped)
 add_subdirectory(tutorialBiped-Finished)
 add_subdirectory(tutorialCollisions)

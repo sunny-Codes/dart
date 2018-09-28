@@ -62,6 +62,7 @@ using namespace std;
 using namespace Eigen;
 // goal position
 VectorXd goalPos(5);
+MatrixXd goalPoses(5,3);
 VectorXd goalPos_1(5);
 VectorXd goalPos_2(5);
 VectorXd goalPos_3(5);
@@ -428,7 +429,7 @@ void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth
 {
   // Create a BoxShape to be used for both visualization and collision checking
   std::shared_ptr<BoxShape> box(new BoxShape(
-      Eigen::Vector3d(_width, _depth,_height)));
+      Eigen::Vector3d(_width, _height, _depth)));
 
   // Create a shape node for visualization and collision checking
   auto shapeNode
@@ -437,7 +438,7 @@ void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth
 
   // Set the location of the shape node
   Eigen::Isometry3d box_tf(Eigen::Isometry3d::Identity());
-  Eigen::Vector3d center = Eigen::Vector3d(0, 0, _height / 2.0);
+  Eigen::Vector3d center = Eigen::Vector3d(0,- _height / 2.0, 0);
   box_tf.translation() = center;
   shapeNode->setRelativeTransform(box_tf);
 
@@ -450,9 +451,16 @@ BodyNode* makeRootBody(const SkeletonPtr& pendulum, const std::string& name)
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
   properties.mName = name + "_joint";
-  properties.mAxis = Eigen::Vector3d::UnitY();
-  properties.mT_ParentBodyToJoint.translation() =
-      Eigen::Vector3d(0, 0, default_height);
+  properties.mAxis = Eigen::Vector3d::UnitZ();
+  //properties.mT_ParentBodyToJoint.translation() =
+  //    Eigen::Vector3d::Identity();
+  //Eigen::Isometry3d tf_1(Eigen::Isometry3d::Identity());
+  /*tf_1.linear() = dart::math::eulerXYZToMatrix(
+      Eigen::Vector3d(0, 90*M_PI/180, 0));
+  */
+  //properties.mT_ParentBodyToJoint= tf_1;
+
+
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
   properties.mDampingCoefficients[0] = default_damping;
@@ -473,10 +481,11 @@ BodyNode* makeRootBody(const SkeletonPtr& pendulum, const std::string& name)
   std::shared_ptr<CylinderShape> cyl(new CylinderShape(R, h));
 
   // Line up the cylinder with the Joint axis
-  Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
-  tf.linear() = dart::math::eulerXYZToMatrix(
-        Eigen::Vector3d(90.0 * M_PI / 180.0, 0, 0));
 
+Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+/*  tf.linear() = dart::math::eulerXYZToMatrix(
+        Eigen::Vector3d(0,90*M_PI/180, 0));
+*/
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
   shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
   shapeNode->setRelativeTransform(tf);
@@ -502,10 +511,18 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
   properties.mName = name + "_joint";
-  properties.mAxis = Eigen::Vector3d::UnitY();
+  properties.mAxis = Eigen::Vector3d::UnitZ();
+  
+  Eigen::Isometry3d tf_1(Eigen::Isometry3d::Identity());
+  /*
+  tf_1.linear() = dart::math::eulerXYZToMatrix(
+      Eigen::Vector3d(0, 90*M_PI/180, 0));
+  */
+  properties.mT_ParentBodyToJoint= tf_1;
+  
   properties.mT_ParentBodyToJoint.translation() =
      // Eigen::Vector3d::Identity();
-      Eigen::Vector3d(0, 0, default_height);
+      Eigen::Vector3d(0,-default_height,0);
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
   properties.mDampingCoefficients[0] = default_damping;
@@ -521,8 +538,9 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
 
   // Line up the cylinder with the Joint axis
   Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
-  tf.linear() = dart::math::eulerXYZToMatrix(
-        Eigen::Vector3d(90.0 * M_PI / 180.0, 0, 0));
+  //tf.linear() = dart::math::eulerXYZToMatrix(
+  //      Eigen::Vector3d::Identity());
+  //Eigen::Vector3d(0,90.0 * M_PI / 180.0, 0));
 
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
   shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
@@ -577,8 +595,11 @@ int main(int argc, char* argv[])
     goalPos_1 << 100 * M_PI /180.0, 0.0, 0.0, 0.0, 0.0;
     goalPos_2 << 150 * M_PI /180.0, 90*M_PI/180.0, 30*M_PI/180.0, 0.0, 0.0;
     goalPos_3 << 60 * M_PI /180.0, 0.0, 0.0, 150*M_PI/180.0, 45*M_PI/180;
-    goalPos= goalPos_1;
-
+    goalPoses << goalPos_1, goalPos_2, goalPos_3;
+    goalPos= goalPoses.col(0); //goalPos_1;
+    cout<<"0: "<< goalPos.transpose()<<endl;
+    goalPos= goalPoses.col(1);
+    cout <<"1: "<<goalPos.transpose()<<endl;
 
 
     // Create an empty Skeleton with the name "pendulum"
@@ -596,19 +617,19 @@ int main(int argc, char* argv[])
 
   // Set the initial position of the first DegreeOfFreedom so that the pendulum
   // starts to swing right away
-  pendulum->getDof(1)->setPosition(90 * M_PI / 180.0);
+  pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
 
   // Create a goal point (ball)
   // SkeletonPtr g_ball= createBall();
 
   // Create a goal pendulum
   SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
-  BodyNode* g_bn = addBody(g_pendulum, nullptr, "goal_body1");
+  BodyNode* g_bn = makeRootBody(g_pendulum, "goal_body1");
   g_bn = addBody(g_pendulum, g_bn, "goal_body2");
   g_bn = addBody(g_pendulum, g_bn, "goal_body3");
   g_bn = addBody(g_pendulum, g_bn, "goal_body4");
   g_bn = addBody(g_pendulum, g_bn, "goal_body5");
-  g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+  //g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
   }
@@ -618,6 +639,7 @@ int main(int argc, char* argv[])
   WorldPtr world= std::make_shared<World>();
   world->addSkeleton(pendulum);
   world->addSkeleton(g_pendulum);
+  world->setGravity(Vector3d(0,-9.8,0));
   // world->addSkeleton(g_ball);  
   // Create a window for rendering the world and handling user input
   MyWindow window(world);
@@ -642,4 +664,3 @@ int main(int argc, char* argv[])
   window.initWindow(1080, 810, "Multi-Pendulum Tutorial");
   glutMainLoop();
 }
-
