@@ -32,10 +32,10 @@
 
 #include <dart/dart.hpp>
 #include <dart/gui/gui.hpp>
-
+#define EPSILON 0.0001
 const double default_height = 1.0; // m
 const double default_width = 0.2;  // m
-const double default_depth = 0.2;  // m
+const double default_depth = EPSILON;  // m
 
 const double default_torque = 15.0; // N-m
 const double default_force =  15.0; // N
@@ -55,6 +55,11 @@ const double desired_height = 1.0; // m
 const double desired_width = 0.2;  // m
 const double desired_depth = 0.2;  // m
 const double desired_rest_position = 0.0;
+
+const double default_ground_width = 2;
+const double default_wall_thickness = 0.1;
+const double default_wall_height = 1;
+const double default_spawn_range = 0.9*default_ground_width/2;
 
 using namespace dart::dynamics;
 using namespace dart::simulation;
@@ -199,7 +204,7 @@ public:
     // Compute the joint position error
     Eigen::VectorXd q = mPendulum->getPositions();
     Eigen::VectorXd dq = mPendulum->getVelocities();
-    //q += dq * mPendulum->getTimeStep();
+    q += dq * mPendulum->getTimeStep();
 
     Eigen::VectorXd q_err = goalPos - q;
 
@@ -208,11 +213,12 @@ public:
 
     // Compute the joint forces needed to compensate for Coriolis forces and
     // gravity
-    const Eigen::VectorXd& Cg = mPendulum->getCoriolisAndGravityForces();
+    
+    //const Eigen::VectorXd& Cg = mPendulum->getCoriolisAndGravityForces();
 
     // Compute the desired joint forces
     const Eigen::MatrixXd& M = mPendulum->getMassMatrix();
-    mForces = M * (mKpPD * q_err + mKdPD * dq_err) + Cg;
+    mForces = M * (mKpPD * q_err + mKdPD * dq_err) ; //+ Cg;
 
     mPendulum->setForces(mForces);
   }
@@ -386,7 +392,7 @@ public:
     // Step the simulation forward
     SimWindow::timeStepping();
     for (int i=0;i<5;i++){
-        mWorld->getSkeleton(1)->setPosition(i, goalPos[i]);
+        mWorld->getSkeleton("goal_pendulum")->setPosition(i, goalPos[i]);
     }
   }
 
@@ -446,32 +452,17 @@ void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth
   bn->setLocalCOM(center);
 }
 
-BodyNode* makeRootBody(const SkeletonPtr& pendulum, const std::string& name)
+BodyNode* makeRevoluteRootBody(const SkeletonPtr& pendulum, const std::string& name)
 {
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
   properties.mName = name + "_joint";
   properties.mAxis = Eigen::Vector3d::UnitZ();
-  //properties.mT_ParentBodyToJoint.translation() =
-  //    Eigen::Vector3d::Identity();
-  //Eigen::Isometry3d tf_1(Eigen::Isometry3d::Identity());
-  /*tf_1.linear() = dart::math::eulerXYZToMatrix(
-      Eigen::Vector3d(0, 90*M_PI/180, 0));
-  */
-  //properties.mT_ParentBodyToJoint= tf_1;
-
 
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
   properties.mDampingCoefficients[0] = default_damping;
 
-/*
-  RevoluteJoint::Properties properties;
-  properties.mName = name + "_joint";
-  properties.mRestPositions = Eigen::Vector3d::Constant(default_rest_position);
-  properties.mSpringStiffnesses = Eigen::Vector3d::Constant(default_stiffness);
-  properties.mDampingCoefficients = Eigen::Vector3d::Constant(default_damping);
-*/
   BodyNodePtr bn = pendulum->createJointAndBodyNodePair<RevoluteJoint>(
         nullptr, properties, BodyNode::AspectProperties(name)).second;
 
@@ -483,27 +474,50 @@ BodyNode* makeRootBody(const SkeletonPtr& pendulum, const std::string& name)
   // Line up the cylinder with the Joint axis
 
 Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
-/*  tf.linear() = dart::math::eulerXYZToMatrix(
-        Eigen::Vector3d(0,90*M_PI/180, 0));
-*/
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
   shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
   shapeNode->setRelativeTransform(tf);
-
-  /*
-  // Make a shape for the Joint
-  const double& R = default_width;
-  std::shared_ptr<EllipsoidShape> ball(
-        new EllipsoidShape(sqrt(2) * Eigen::Vector3d(R, R, R)));
-  auto shapeNode = bn->createShapeNodeWith<VisualAspect>(ball);
-  shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
-  */
 
   // Set the geometry of the Body
   setGeometry(bn);
 
   return bn;
 }
+
+BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::string& name)
+{
+  // Set up the properties for the Joint
+  TranslationalJoint2D::Properties properties;
+  properties.mName = name + "_joint";
+  properties.setXYPlane();
+
+  properties.mRestPositions[0] = default_rest_position;
+  properties.mRestPositions[1] = default_rest_position;
+
+  properties.mSpringStiffnesses[0] = default_stiffness;
+  properties.mDampingCoefficients[0] = default_damping;
+
+  BodyNodePtr bn = pendulum->createJointAndBodyNodePair<TranslationalJoint2D>(
+        nullptr, properties, BodyNode::AspectProperties(name)).second;
+
+  // Make a shape for the Joint
+  const double R = default_width / 2.0;
+  const double h = default_depth;
+  std::shared_ptr<CylinderShape> cyl(new CylinderShape(R, h));
+
+  // Line up the cylinder with the Joint axis
+
+Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+  auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
+  shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
+  shapeNode->setRelativeTransform(tf);
+
+  // Set the geometry of the Body
+  setGeometry(bn);
+
+  return bn;
+}
+
 
 BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
                   const std::string& name)
@@ -512,16 +526,10 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   RevoluteJoint::Properties properties;
   properties.mName = name + "_joint";
   properties.mAxis = Eigen::Vector3d::UnitZ();
-  
   Eigen::Isometry3d tf_1(Eigen::Isometry3d::Identity());
-  /*
-  tf_1.linear() = dart::math::eulerXYZToMatrix(
-      Eigen::Vector3d(0, 90*M_PI/180, 0));
-  */
   properties.mT_ParentBodyToJoint= tf_1;
   
   properties.mT_ParentBodyToJoint.translation() =
-     // Eigen::Vector3d::Identity();
       Eigen::Vector3d(0,-default_height,0);
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
@@ -538,9 +546,6 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
 
   // Line up the cylinder with the Joint axis
   Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
-  //tf.linear() = dart::math::eulerXYZToMatrix(
-  //      Eigen::Vector3d::Identity());
-  //Eigen::Vector3d(0,90.0 * M_PI / 180.0, 0));
 
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
   shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
@@ -589,6 +594,50 @@ void print_Skeleton(SkeletonPtr skel){
 }
 
 
+SkeletonPtr createGround()
+{
+  SkeletonPtr ground = Skeleton::create("ground");
+
+  BodyNode* bn = ground->createJointAndBodyNodePair<WeldJoint>().second;
+
+  std::shared_ptr<BoxShape> shape = std::make_shared<BoxShape>(
+        Eigen::Vector3d(default_ground_width, default_ground_width,
+                        default_wall_thickness));
+  auto shapeNode
+      = bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
+  shapeNode->getVisualAspect()->setColor(Eigen::Vector3d(1.0, 1.0, 1.0));
+
+  return ground;
+}
+
+
+SkeletonPtr createFloor()
+{
+  SkeletonPtr floor = Skeleton::create("floor");
+  
+  // Give the floor a body
+  BodyNodePtr body =
+      floor->createJointAndBodyNodePair<WeldJoint>(nullptr).second;
+  
+  // Give the body a shape
+  double floor_width = 10.0;
+  double floor_height = 0.01;
+  std::shared_ptr<BoxShape> box(
+      new BoxShape(Eigen::Vector3d(floor_width, floor_height, floor_width)));
+  auto shapeNode
+      = body->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(box);
+  shapeNode->getVisualAspect()->setColor(dart::Color::Black());
+  
+  // Put the body into position
+  Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+  tf.translation() = Eigen::Vector3d(0.0, -3.0, 0.0);
+  body->getParentJoint()->setTransformFromParentBodyNode(tf);
+  
+  return floor;
+}
+
+
+
 int main(int argc, char* argv[])
 {
 
@@ -606,10 +655,7 @@ int main(int argc, char* argv[])
   SkeletonPtr pendulum = Skeleton::create("pendulum");
 
   // Add each body to the last BodyNode in the pendulum
-  BodyNode* bn = makeRootBody(pendulum, "body1");
-
-  //BodyNode* bn= addBody(pendulum, nullptr, "body1");
-
+  BodyNode* bn = makeTranslational2DRootBody(pendulum, "body1");
   bn = addBody(pendulum, bn, "body2");
   bn = addBody(pendulum, bn, "body3");
   bn = addBody(pendulum, bn, "body4");
@@ -619,28 +665,28 @@ int main(int argc, char* argv[])
   // starts to swing right away
   pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
 
-  // Create a goal point (ball)
-  // SkeletonPtr g_ball= createBall();
-
   // Create a goal pendulum
   SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
-  BodyNode* g_bn = makeRootBody(g_pendulum, "goal_body1");
+  BodyNode* g_bn = makeTranslational2DRootBody(g_pendulum, "goal_body1");
   g_bn = addBody(g_pendulum, g_bn, "goal_body2");
   g_bn = addBody(g_pendulum, g_bn, "goal_body3");
   g_bn = addBody(g_pendulum, g_bn, "goal_body4");
   g_bn = addBody(g_pendulum, g_bn, "goal_body5");
+  g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+
+
   //g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
   }
 
   // Create a world and add the pendulum to the world
-  //WorldPtr world = World::create();
   WorldPtr world= std::make_shared<World>();
   world->addSkeleton(pendulum);
   world->addSkeleton(g_pendulum);
-  world->setGravity(Vector3d(0,-9.8,0));
-  // world->addSkeleton(g_ball);  
+  world->addSkeleton(createFloor());
+
+    world->setGravity(Vector3d(0,-9.8,0));
   // Create a window for rendering the world and handling user input
   MyWindow window(world);
 
@@ -661,6 +707,6 @@ int main(int argc, char* argv[])
 
   // Initialize glut, initialize the window, and begin the glut event loop
   glutInit(&argc, argv);
-  window.initWindow(1080, 810, "Multi-Pendulum Tutorial");
+  window.initWindow(1080, 810, "2D walking body");
   glutMainLoop();
 }
