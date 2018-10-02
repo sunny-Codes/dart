@@ -682,11 +682,19 @@ int main(int argc, char* argv[])
 
   // Create a world and add the pendulum to the world
   WorldPtr world= std::make_shared<World>();
+
+  if (dart::collision::CollisionDetector::getFactory()->canCreate("bullet"))
+  {
+      world->getConstraintSolver()->setCollisionDetector(
+              dart::collision::CollisionDetector::getFactory()->create("bullet"));
+  }
+
+
   world->addSkeleton(pendulum);
   world->addSkeleton(g_pendulum);
   world->addSkeleton(createFloor());
 
-    world->setGravity(Vector3d(0,-9.8,0));
+  world->setGravity(Vector3d(0,-9.8,0));
   // Create a window for rendering the world and handling user input
   MyWindow window(world);
 
