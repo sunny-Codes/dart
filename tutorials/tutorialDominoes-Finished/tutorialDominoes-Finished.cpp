@@ -126,6 +126,7 @@ public:
     mForces = M * (mKpPD * q_err + mKdPD * dq_err) + Cg;
 
     mManipulator->setForces(mForces);
+    //cout<<"pdforces"<<endl;
   }
 
   /// Compute an operational space controller to push on the first domino
@@ -181,6 +182,7 @@ public:
               - Kd * dq + Kd * pinv_J * Kp * e + Cg + f;
 
     mManipulator->setForces(mForces);
+    //cout<<"set operational forces"
   }
 
 protected:
@@ -505,8 +507,8 @@ int main(int argc, char* argv[])
   std::cout << std::endl;
   std::cout << "spacebar: Begin simulation (you can no longer create or remove dominoes)" << std::endl;
   std::cout << "'p': replay simulation" << std::endl;
-  std::cout << "'f': Push the first domino with a disembodied force so that it falls over" << std::endl;
-  std::cout << "'r': Push the first domino with the manipulator so that it falls over" << std::endl;
+  std::cout << "'f': Push the first domino with a disembodied force so that it falls over (pd control)" << std::endl;
+  std::cout << "'r': Push the first domino with the manipulator so that it falls over (operational control)" << std::endl;
   std::cout << "'v': Turn contact force visualization on/off" << std::endl;
 
   glutInit(&argc, argv);

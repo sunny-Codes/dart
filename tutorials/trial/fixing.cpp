@@ -66,11 +66,14 @@ using namespace dart::simulation;
 using namespace std;
 using namespace Eigen;
 // goal position
-VectorXd goalPos(5);
-MatrixXd goalPoses(5,3);
-VectorXd goalPos_1(5);
-VectorXd goalPos_2(5);
-VectorXd goalPos_3(5);
+int tot_dof=6; // root rotate
+int P_NUM=3;
+int cur_p_idx;
+VectorXd goalPos(tot_dof);
+MatrixXd goalPoses(tot_dof,P_NUM);
+VectorXd goalPos_0(tot_dof);
+VectorXd goalPos_1(tot_dof);
+VectorXd goalPos_2(tot_dof);
 
 
 class MyWindow : public dart::gui::SimWindow
@@ -265,14 +268,11 @@ public:
         //setPDForces();
         //applyForce(9);
         break;
-      case 'z':
-        goalPos= goalPos_1;
-        break;
-      case 'x':
-        goalPos= goalPos_2;
-        break;
       case 'c':
-        goalPos= goalPos_3;
+        cur_p_idx= (cur_p_idx+1)% P_NUM;
+        cout<<"cur_p_idx"<<endl;
+        goalPos= goalPoses.col(cur_p_idx);
+        cout<<goalPos.transpose()<<endl;
         break;
 
       case 'q':
@@ -391,7 +391,8 @@ public:
     
     // Step the simulation forward
     SimWindow::timeStepping();
-    for (int i=0;i<5;i++){
+    for (int i=0;i<tot_dof;i++){
+        //if(i==2) mWorld->getSkeleton("goal_pendulum")->getRootBodyNode()->setProperties
         mWorld->getSkeleton("goal_pendulum")->setPosition(i, goalPos[i]);
     }
   }
@@ -445,7 +446,13 @@ void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth
   // Set the location of the shape node
   Eigen::Isometry3d box_tf(Eigen::Isometry3d::Identity());
   Eigen::Vector3d center = Eigen::Vector3d(0,- _height / 2.0, 0);
-  box_tf.translation() = center;
+  //box_tf.linear()= dart::math::eulerXYZToMatrix(
+  //        Eigen::Vector3d(0,0,30*M_PI/180));
+
+  Eigen::Isometry3d tl(Eigen::Isometry3d::Identity());
+  tl.translation() = center;
+  box_tf= box_tf*tl;
+
   shapeNode->setRelativeTransform(box_tf);
 
   // Move the center of mass to the center of the object
@@ -476,6 +483,7 @@ BodyNode* makeRevoluteRootBody(const SkeletonPtr& pendulum, const std::string& n
 Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
   shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
+  //tf.linear()= dart::math::eulerXYZToMatrix(Eigen::Vector3d(0,0,30*M_PI/180));
   shapeNode->setRelativeTransform(tf);
 
   // Set the geometry of the Body
@@ -489,8 +497,9 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
   // Set up the properties for the Joint
   TranslationalJoint2D::Properties properties;
   properties.mName = name + "_joint";
-  properties.setXYPlane();
-
+  //properties.setXYPlane();
+  properties.setArbitraryPlane(Vector3d(cos(60*M_PI/180), sin(60*M_PI/180),0),Vector3d(-sin(60*M_PI/180), cos(60*M_PI/180),0) );
+  
   properties.mRestPositions[0] = default_rest_position;
   properties.mRestPositions[1] = default_rest_position;
 
@@ -507,7 +516,8 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
 
   // Line up the cylinder with the Joint axis
 
-Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+  Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+  //tf.linear()= dart::math::eulerXYZToMatrix(Eigen::Vector3d(0,0,30*M_PI/180));
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
   shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
   shapeNode->setRelativeTransform(tf);
@@ -529,6 +539,13 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   Eigen::Isometry3d tf_1(Eigen::Isometry3d::Identity());
   properties.mT_ParentBodyToJoint= tf_1;
   
+  //ADDED
+  /*tf_1.linear()= dart::math::eulerXYZToMatrix(
+          Eigen::Vector3d(0,0,30*M_PI/180));
+  Eigen::Isometry3d tf_2(Eigen::Isometry3d::Identity());
+  tf_2.translation()= Eigen::Vector3d(0,-default_height,0);
+  properties.mT_ParentBodyToJoint= tf_1*tf_2;
+  */
   properties.mT_ParentBodyToJoint.translation() =
       Eigen::Vector3d(0,-default_height,0);
   properties.mRestPositions[0] = default_rest_position;
@@ -630,7 +647,7 @@ SkeletonPtr createFloor()
   
   // Put the body into position
   Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
-  tf.translation() = Eigen::Vector3d(0.0, -3.0, 0.0);
+  tf.translation() = Eigen::Vector3d(0.0, -5.0, 0.0);
   body->getParentJoint()->setTransformFromParentBodyNode(tf);
   
   return floor;
@@ -641,14 +658,13 @@ SkeletonPtr createFloor()
 int main(int argc, char* argv[])
 {
 
-    goalPos_1 << 100 * M_PI /180.0, 0.0, 0.0, 0.0, 0.0;
-    goalPos_2 << 150 * M_PI /180.0, 90*M_PI/180.0, 30*M_PI/180.0, 0.0, 0.0;
-    goalPos_3 << 60 * M_PI /180.0, 0.0, 0.0, 150*M_PI/180.0, 45*M_PI/180;
-    goalPoses << goalPos_1, goalPos_2, goalPos_3;
-    goalPos= goalPoses.col(0); //goalPos_1;
-    cout<<"0: "<< goalPos.transpose()<<endl;
-    goalPos= goalPoses.col(1);
-    cout <<"1: "<<goalPos.transpose()<<endl;
+    goalPos_0 << 0, 30*M_PI/180, 0, 0, 0, 0;
+    goalPos_1 << 0, 0, 30*M_PI/180.0, 0, 0, 0, 0;
+    goalPos_2 << cos(30*M_PI/180.0), 0, 0,  0, 0, 0;
+    
+    goalPoses << goalPos_0, goalPos_1, goalPos_2;
+    cur_p_idx=0;
+    goalPos= goalPoses.col(cur_p_idx); //goalPos_1;
 
 
     // Create an empty Skeleton with the name "pendulum"
@@ -663,7 +679,7 @@ int main(int argc, char* argv[])
 
   // Set the initial position of the first DegreeOfFreedom so that the pendulum
   // starts to swing right away
-  pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+  pendulum->getDof(0)->setPosition(100 * M_PI / 180.0);
 
   // Create a goal pendulum
   SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
@@ -672,12 +688,16 @@ int main(int argc, char* argv[])
   g_bn = addBody(g_pendulum, g_bn, "goal_body3");
   g_bn = addBody(g_pendulum, g_bn, "goal_body4");
   g_bn = addBody(g_pendulum, g_bn, "goal_body5");
-  g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+  //g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
 
 
   //g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+  //pendulum->enableSelfCollisionCheck();
+  //pendulum->disableAdjacentBodyCheck();
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
+      //g_pendulum->getBodyNode(i)->enableSelfCollisionCheck(); //setCollidable(false);
+      //g_pendulum->getBodyNode(i)->DisableAdjacentBodyCheck(); //setCollidable(false);
   }
 
   // Create a world and add the pendulum to the world

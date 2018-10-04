@@ -1,9 +1,8 @@
 /*
- * Copyright (c) 2011-2018, The DART development contributors
+ * Copyright (c) 2015-2016, Graphics Lab, Georgia Tech Research Corporation
+ * Copyright (c) 2015-2016, Humanoid Lab, Georgia Tech Research Corporation
+ * Copyright (c) 2016, Personal Robotics Lab, Carnegie Mellon University
  * All rights reserved.
- *
- * The list of contributors can be found at:
- *   https://github.com/dartsim/dart/blob/master/LICENSE
  *
  * This file is provided under the following "BSD-style" License:
  *   Redistribution and use in source and binary forms, with or
@@ -30,8 +29,8 @@
  *   POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <dart/dart.hpp>
-#include <dart/gui/gui.hpp>
+#include "dart/dart.hpp"
+#include "dart/gui/gui.hpp"
 
 const double default_height = 1.0; // m
 const double default_width = 0.2;  // m
@@ -251,15 +250,12 @@ public:
   void timeStepping() override
   {
     // Reset all the shapes to be Blue
-    // lesson 1-a
     for(std::size_t i = 0; i < mPendulum->getNumBodyNodes(); ++i)
     {
       BodyNode* bn = mPendulum->getBodyNode(i);
       auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
-      //for(std::size_t j = 0; j < 1; ++j)
-        visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
-        visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
-
+      for(std::size_t j = 0; j < 2; ++j)
+        visualShapeNodes[j]->getVisualAspect()->setColor(dart::Color::Blue());
 
       // If we have three visualization shapes, that means the arrow is
       // attached. We should remove it in case this body is no longer
@@ -351,8 +347,8 @@ void setGeometry(const BodyNodePtr& bn)
   // Create a shape node for visualization and collision checking
   auto shapeNode
       = bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(box);
-  shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
-
+  //shapeNode->getVisualAspect()->setColor(dart::Color::Green());
+  if(bn->getName()=="body1") shapeNode->getVisualAspect()->setColor(dart::Color::Green());
   // Set the location of the shape node
   Eigen::Isometry3d box_tf(Eigen::Isometry3d::Identity());
   Eigen::Vector3d center = Eigen::Vector3d(0, 0, default_height / 2.0);
@@ -379,7 +375,8 @@ BodyNode* makeRootBody(const SkeletonPtr& pendulum, const std::string& name)
   std::shared_ptr<EllipsoidShape> ball(
         new EllipsoidShape(sqrt(2) * Eigen::Vector3d(R, R, R)));
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(ball);
-  shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
+  shapeNode->getVisualAspect()->setColor(dart::Color::Orange());
+
 
   // Set the geometry of the Body
   setGeometry(bn);
@@ -441,7 +438,7 @@ int main(int argc, char* argv[])
   pendulum->getDof(1)->setPosition(120 * M_PI / 180.0);
 
   // Create a world and add the pendulum to the world
-  WorldPtr world = World::create();
+  WorldPtr world(new World);
   world->addSkeleton(pendulum);
 
   // Create a window for rendering the world and handling user input
@@ -466,3 +463,4 @@ int main(int argc, char* argv[])
   window.initWindow(640, 480, "Multi-Pendulum Tutorial");
   glutMainLoop();
 }
+
