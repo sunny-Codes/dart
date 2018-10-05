@@ -66,7 +66,7 @@ using namespace dart::simulation;
 using namespace std;
 using namespace Eigen;
 // goal position
-int tot_dof=10; // root(translational) 2 + revolute joint angle 4 * 2(left,right)
+int tot_dof=9; // root(translational) 2 + revolute joint angle 1(torso)+ 3 * 2(left,right)
 int P_NUM=3; //number of goal poses
 int cur_p_idx;
 VectorXd goalPos(tot_dof);
@@ -640,7 +640,7 @@ SkeletonPtr createFloor()
   
   // Give the body a shape
   double floor_width = 10.0;
-  double floor_height = 0.01;
+  double floor_height = 1;
   std::shared_ptr<BoxShape> box(
       new BoxShape(Eigen::Vector3d(floor_width, floor_height, floor_width)));
   auto shapeNode
@@ -649,7 +649,7 @@ SkeletonPtr createFloor()
   
   // Put the body into position
   Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
-  tf.translation() = Eigen::Vector3d(0.0, -5.0, 0.0);
+  tf.translation() = Eigen::Vector3d(0.0, -2.6, 0.0);
   body->getParentJoint()->setTransformFromParentBodyNode(tf);
   
   return floor;
@@ -660,9 +660,9 @@ SkeletonPtr createFloor()
 int main(int argc, char* argv[])
 {
 
-    goalPos_0 << 0, 0, 30*M_PI/180, 0, 0, 0;
-    goalPos_1 << 0, 0, 0, 30*M_PI/180.0,  0, 0;
-    goalPos_2 << 0, 0, 0, 0, 30*M_PI/180.0, 0;
+    goalPos_0 << 0, 0, 180*M_PI/180, 30*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
+    goalPos_1 << 0, 0, 180*M_PI/180, 0, 30*M_PI/180, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
+    goalPos_2 << 0, 0, 180*M_PI/180, 30*M_PI/180, 0, 90*M_PI/180, -30*M_PI/180, 0, 110*M_PI/180 ;
     
     goalPoses << goalPos_0, goalPos_1, goalPos_2;
     cur_p_idx=0;
@@ -673,36 +673,43 @@ int main(int argc, char* argv[])
   SkeletonPtr pendulum = Skeleton::create("pendulum");
 
   // Add each body to the last BodyNode in the pendulum
-  BodyNode* bn = makeTranslational2DRootBody(pendulum, "root");
-  BodyNode * bn_l = addBody(pendulum, bn, "body_l1", Eigen::Vector3d(0,0,0));
-  bn_l = addBody(pendulum, bn_l, "body_l2");
-  bn_l = addBody(pendulum, bn_l, "body_l3");
-  bn_l = addBody(pendulum, bn_l, "body_l4");
+  BodyNode* root = makeTranslational2DRootBody(pendulum, "root");
+  BodyNode *bn_t= addBody(pendulum, root, "torso", Eigen::Vector3d(0,0,0));
+
+  BodyNode * bn_l = addBody(pendulum, root, "leg_l1", Eigen::Vector3d(0,0,0));
+  bn_l = addBody(pendulum, bn_l, "leg_l2");
+  bn_l = addBody(pendulum, bn_l, "leg_l3");
   
-  BodyNode* bn_r = addBody(pendulum, bn, "body_r1", Eigen::Vector3d(0,0,0));
-  bn_r = addBody(pendulum, bn_r, "body_r2");
-  bn_r = addBody(pendulum, bn_r, "body_r3");
-  bn_r = addBody(pendulum, bn_r, "body_r4");
+  BodyNode* bn_r = addBody(pendulum, root, "leg_r1", Eigen::Vector3d(0,0,0));
+  bn_r = addBody(pendulum, bn_r, "leg_r2");
+  bn_r = addBody(pendulum, bn_r, "leg_r3");
 
   // Set the initial position of the first DegreeOfFreedom so that the pendulum
   // starts to swing right away
+  pendulum->getDof(2)->setPosition(180*M_PI/180.0); //torso
+  pendulum->getDof(5)->setPosition(90*M_PI/180.0); //left foot
+  pendulum->getDof(8)->setPosition(90*M_PI/180.0); //right foot
+
   pendulum->getDof(0)->setPosition(100 * M_PI / 180.0);
 
   // Create a goal pendulum
   SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
-  BodyNode* g_bn = makeTranslational2DRootBody(g_pendulum, "goal_root");
+  BodyNode* g_root = makeTranslational2DRootBody(g_pendulum, "goal_root");
   
-  BodyNode* g_bn_l = addBody(g_pendulum, g_bn, "goalbody_l1", Eigen::Vector3d(0,0,0));
-  g_bn_l = addBody(g_pendulum, g_bn_l, "goalbody_l2");
-  g_bn_l = addBody(g_pendulum, g_bn_l, "goalbody_l3");
-  g_bn_l = addBody(g_pendulum, g_bn_l, "goalbody_l4");
+  BodyNode *g_bn_t= addBody(g_pendulum, g_root, "goal_torso", Eigen::Vector3d(0,0,0)); 
+  
+  BodyNode* g_bn_l = addBody(g_pendulum, g_root, "goal_leg_l1", Eigen::Vector3d(0,0,0));
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l2");
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l3");
  
-  BodyNode* g_bn_r = addBody(g_pendulum, g_bn, "goalbody_r1", Eigen::Vector3d(0,0,0));
-  g_bn_r = addBody(g_pendulum, g_bn_r, "goalbody_r2");
-  g_bn_r = addBody(g_pendulum, g_bn_r, "goalbody_r3");
-  g_bn_r = addBody(g_pendulum, g_bn_r, "goalbody_r4");
+  BodyNode* g_bn_r = addBody(g_pendulum, g_root, "goal_leg_r1", Eigen::Vector3d(0,0,0));
+  g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r2");
+  g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r3");
   
   //totdof=10 //cout<<g_pendulum->getNumDofs()<<endl;
+  g_pendulum->getDof(2)->setPosition(180*M_PI/180.0); //torso
+  g_pendulum->getDof(5)->setPosition(90*M_PI/180.0); //left foot
+  g_pendulum->getDof(8)->setPosition(90*M_PI/180.0); //right foot
 
 
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
