@@ -66,8 +66,8 @@ using namespace dart::simulation;
 using namespace std;
 using namespace Eigen;
 // goal position
-int tot_dof=6; // root rotate
-int P_NUM=3;
+int tot_dof=10; // root(translational) 2 + revolute joint angle 4 * 2(left,right)
+int P_NUM=3; //number of goal poses
 int cur_p_idx;
 VectorXd goalPos(tot_dof);
 MatrixXd goalPoses(tot_dof,P_NUM);
@@ -323,9 +323,11 @@ public:
       BodyNode* bn = mPendulum->getBodyNode(i);
       auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
       //for(std::size_t j = 0; j < 1; ++j)
-        visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
-        visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
 
+      visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
+      if(visualShapeNodes.size()>1){
+          visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
+      }       
 
       // If we have three visualization shapes, that means the arrow is
       // attached. We should remove it in case this body is no longer
@@ -497,8 +499,8 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
   // Set up the properties for the Joint
   TranslationalJoint2D::Properties properties;
   properties.mName = name + "_joint";
-  //properties.setXYPlane();
-  properties.setArbitraryPlane(Vector3d(cos(60*M_PI/180), sin(60*M_PI/180),0),Vector3d(-sin(60*M_PI/180), cos(60*M_PI/180),0) );
+  properties.setXYPlane();
+  //properties.setArbitraryPlane(Vector3d(cos(60*M_PI/180), sin(60*M_PI/180),0),Vector3d(-sin(60*M_PI/180), cos(60*M_PI/180),0) );
   
   properties.mRestPositions[0] = default_rest_position;
   properties.mRestPositions[1] = default_rest_position;
@@ -523,14 +525,14 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
   shapeNode->setRelativeTransform(tf);
 
   // Set the geometry of the Body
-  setGeometry(bn);
+  //setGeometry(bn);
 
   return bn;
 }
 
 
 BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
-                  const std::string& name)
+                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0))
 {
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
@@ -546,8 +548,8 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   tf_2.translation()= Eigen::Vector3d(0,-default_height,0);
   properties.mT_ParentBodyToJoint= tf_1*tf_2;
   */
-  properties.mT_ParentBodyToJoint.translation() =
-      Eigen::Vector3d(0,-default_height,0);
+  properties.mT_ParentBodyToJoint.translation() = parentBodyToJoint;
+      //Eigen::Vector3d(0,-default_height,0);
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
   properties.mDampingCoefficients[0] = default_damping;
@@ -658,9 +660,9 @@ SkeletonPtr createFloor()
 int main(int argc, char* argv[])
 {
 
-    goalPos_0 << 0, 30*M_PI/180, 0, 0, 0, 0;
-    goalPos_1 << 0, 0, 30*M_PI/180.0, 0, 0, 0, 0;
-    goalPos_2 << cos(30*M_PI/180.0), 0, 0,  0, 0, 0;
+    goalPos_0 << 0, 0, 30*M_PI/180, 0, 0, 0;
+    goalPos_1 << 0, 0, 0, 30*M_PI/180.0,  0, 0;
+    goalPos_2 << 0, 0, 0, 0, 30*M_PI/180.0, 0;
     
     goalPoses << goalPos_0, goalPos_1, goalPos_2;
     cur_p_idx=0;
@@ -671,11 +673,16 @@ int main(int argc, char* argv[])
   SkeletonPtr pendulum = Skeleton::create("pendulum");
 
   // Add each body to the last BodyNode in the pendulum
-  BodyNode* bn = makeTranslational2DRootBody(pendulum, "body1");
-  bn = addBody(pendulum, bn, "body2");
-  bn = addBody(pendulum, bn, "body3");
-  bn = addBody(pendulum, bn, "body4");
-  bn = addBody(pendulum, bn, "body5");
+  BodyNode* bn = makeTranslational2DRootBody(pendulum, "root");
+  BodyNode * bn_l = addBody(pendulum, bn, "body_l1", Eigen::Vector3d(0,0,0));
+  bn_l = addBody(pendulum, bn_l, "body_l2");
+  bn_l = addBody(pendulum, bn_l, "body_l3");
+  bn_l = addBody(pendulum, bn_l, "body_l4");
+  
+  BodyNode* bn_r = addBody(pendulum, bn, "body_r1", Eigen::Vector3d(0,0,0));
+  bn_r = addBody(pendulum, bn_r, "body_r2");
+  bn_r = addBody(pendulum, bn_r, "body_r3");
+  bn_r = addBody(pendulum, bn_r, "body_r4");
 
   // Set the initial position of the first DegreeOfFreedom so that the pendulum
   // starts to swing right away
@@ -683,21 +690,23 @@ int main(int argc, char* argv[])
 
   // Create a goal pendulum
   SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
-  BodyNode* g_bn = makeTranslational2DRootBody(g_pendulum, "goal_body1");
-  g_bn = addBody(g_pendulum, g_bn, "goal_body2");
-  g_bn = addBody(g_pendulum, g_bn, "goal_body3");
-  g_bn = addBody(g_pendulum, g_bn, "goal_body4");
-  g_bn = addBody(g_pendulum, g_bn, "goal_body5");
-  //g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
+  BodyNode* g_bn = makeTranslational2DRootBody(g_pendulum, "goal_root");
+  
+  BodyNode* g_bn_l = addBody(g_pendulum, g_bn, "goalbody_l1", Eigen::Vector3d(0,0,0));
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goalbody_l2");
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goalbody_l3");
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goalbody_l4");
+ 
+  BodyNode* g_bn_r = addBody(g_pendulum, g_bn, "goalbody_r1", Eigen::Vector3d(0,0,0));
+  g_bn_r = addBody(g_pendulum, g_bn_r, "goalbody_r2");
+  g_bn_r = addBody(g_pendulum, g_bn_r, "goalbody_r3");
+  g_bn_r = addBody(g_pendulum, g_bn_r, "goalbody_r4");
+  
+  //totdof=10 //cout<<g_pendulum->getNumDofs()<<endl;
 
 
-  //g_pendulum->getDof(1)->setPosition(100 * M_PI / 180.0);
-  //pendulum->enableSelfCollisionCheck();
-  //pendulum->disableAdjacentBodyCheck();
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
-      //g_pendulum->getBodyNode(i)->enableSelfCollisionCheck(); //setCollidable(false);
-      //g_pendulum->getBodyNode(i)->DisableAdjacentBodyCheck(); //setCollidable(false);
   }
 
   // Create a world and add the pendulum to the world
