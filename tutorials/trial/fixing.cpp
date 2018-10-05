@@ -734,7 +734,7 @@ int main(int argc, char* argv[])
   // Create a window for rendering the world and handling user input
   MyWindow window(world);
 
-  print_Skeleton(pendulum);
+  //print_Skeleton(pendulum);
   // Print instructions
   std::cout << "space bar: simulation on/off" << std::endl;
   std::cout << "'p': replay simulation" << std::endl;
