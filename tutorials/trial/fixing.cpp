@@ -7,7 +7,7 @@
  *
  * This file is provided under the following "BSD-style" License:
  *   Redistribution and use in source and binary forms, with or
- *   without modification, are permitted provided that the following
+:*   without modification, are permitted provided that the following
  *   conditions are met:
  *   * Redistributions of source code must retain the above copyright
  *     notice, this list of conditions and the following disclaimer.
@@ -32,6 +32,7 @@
 
 #include <dart/dart.hpp>
 #include <dart/gui/gui.hpp>
+#include "fsm.h"
 #define EPSILON 0.0001
 const double default_height = 1.0; // m
 const double default_width = 0.2;  // m
@@ -67,14 +68,15 @@ using namespace std;
 using namespace Eigen;
 // goal position
 int tot_dof=9; // root(translational) 2 + revolute joint angle 1(torso)+ 3 * 2(left,right)
-int P_NUM=3; //number of goal poses
+int P_NUM=4; //number of goal poses
 int cur_p_idx;
+int step=0;
 VectorXd goalPos(tot_dof);
 MatrixXd goalPoses(tot_dof,P_NUM);
 VectorXd goalPos_0(tot_dof);
 VectorXd goalPos_1(tot_dof);
 VectorXd goalPos_2(tot_dof);
-
+VectorXd goalPos_3(tot_dof);
 
 class MyWindow : public dart::gui::SimWindow
 {
@@ -269,9 +271,11 @@ public:
         //applyForce(9);
         break;
       case 'c':
+        step++;
         cur_p_idx= (cur_p_idx+1)% P_NUM;
         cout<<"cur_p_idx"<<endl;
         goalPos= goalPoses.col(cur_p_idx);
+        goalPos[0]= 0.5*(step/2); 
         cout<<goalPos.transpose()<<endl;
         break;
 
@@ -434,7 +438,7 @@ protected:
 
 };
 
-void setGeometry(const BodyNodePtr& bn, float _width=default_width, float _depth=default_depth, float _height=default_height)
+void setGeometry(const BodyNodePtr& bn,float _width=default_width, float _depth=default_depth, float _height=default_height)
 {
   // Create a BoxShape to be used for both visualization and collision checking
   std::shared_ptr<BoxShape> box(new BoxShape(
@@ -532,7 +536,7 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
 
 
 BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
-                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0))
+                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0), Vector3d color=dart::Color::Blue())
 {
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
@@ -567,15 +571,20 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
 
   auto shapeNode = bn->createShapeNodeWith<VisualAspect>(cyl);
-  shapeNode->getVisualAspect()->setColor(dart::Color::Blue());
+  //shapeNode->getVisualAspect()->setColor(color); // dart::Color::Blue());
   shapeNode->setRelativeTransform(tf);
 
   // Set the geometry of the Body
-  setGeometry(bn);
+  setGeometry(bn); //, color);
 
   return bn;
 }
 
+void setColor(BodyNode * bn, Vector3d color){
+    for( int i=0; i<bn->getNumShapeNodes(); i++){
+        bn->getShapeNode(i)->getVisualAspect()->setColor(color);
+    }
+}
 /*
 SkeletonPtr createBall()
 {
@@ -639,7 +648,7 @@ SkeletonPtr createFloor()
       floor->createJointAndBodyNodePair<WeldJoint>(nullptr).second;
   
   // Give the body a shape
-  double floor_width = 10.0;
+  double floor_width = 50.0;
   double floor_height = 1;
   std::shared_ptr<BoxShape> box(
       new BoxShape(Eigen::Vector3d(floor_width, floor_height, floor_width)));
@@ -655,16 +664,39 @@ SkeletonPtr createFloor()
   return floor;
 }
 
-
+void set_default(SkeletonPtr skel, VectorXd def_pos){
+    for (int i=0; i<skel->getNumDofs(); i++){
+        skel->setPosition(i, def_pos[i]);
+    }
+}
 
 int main(int argc, char* argv[])
 {
 
-    goalPos_0 << 0, 0, 180*M_PI/180, 30*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
-    goalPos_1 << 0, 0, 180*M_PI/180, 0, 30*M_PI/180, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
-    goalPos_2 << 0, 0, 180*M_PI/180, 30*M_PI/180, 0, 90*M_PI/180, -30*M_PI/180, 0, 110*M_PI/180 ;
+    VectorXd def_pos(9);
+    def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
+
+    goalPos_0 << 0, 0, 180*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180, 0, 0, 90*M_PI/180 ;
+    goalPos_1 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, -30*M_PI/180, 0, 90*M_PI/180 ;
+    goalPos_2 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180;
+    goalPos_3 << 0.5, 0, 180*M_PI/180, -30*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
     
-    goalPoses << goalPos_0, goalPos_1, goalPos_2;
+    FSM_state s0 (0.05, 9, goalPos_0);
+    FSM_state s1 (0.05, 9, goalPos_1);
+    FSM_state s2 (0.05, 9, goalPos_2);
+    FSM_state s3 (0.05, 9, goalPos_3);
+
+    FSM fsm=FSM();
+    fsm.add_state(s0);
+    fsm.add_state(s1);
+    fsm.add_state(s2);
+    fsm.add_state(s3);
+    fsm.add_transition(transition(0, 0, 1));
+    fsm.add_transition(transition(1, 0, 2));
+    fsm.add_transition(transition(2, 0, 3));
+    fsm.add_transition(transition(3, 0, 0));
+
+    goalPoses << goalPos_0, goalPos_1, goalPos_2, goalPos_3;
     cur_p_idx=0;
     goalPos= goalPoses.col(cur_p_idx); //goalPos_1;
 
@@ -686,10 +718,12 @@ int main(int argc, char* argv[])
 
   // Set the initial position of the first DegreeOfFreedom so that the pendulum
   // starts to swing right away
+  set_default(pendulum, def_pos);
+  /*
   pendulum->getDof(2)->setPosition(180*M_PI/180.0); //torso
   pendulum->getDof(5)->setPosition(90*M_PI/180.0); //left foot
   pendulum->getDof(8)->setPosition(90*M_PI/180.0); //right foot
-
+*/
   pendulum->getDof(0)->setPosition(100 * M_PI / 180.0);
 
   // Create a goal pendulum
@@ -699,18 +733,26 @@ int main(int argc, char* argv[])
   BodyNode *g_bn_t= addBody(g_pendulum, g_root, "goal_torso", Eigen::Vector3d(0,0,0)); 
   
   BodyNode* g_bn_l = addBody(g_pendulum, g_root, "goal_leg_l1", Eigen::Vector3d(0,0,0));
-  g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l2");
+  setColor(g_bn_l,dart::Color::Gray());
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l2"); 
+  setColor(g_bn_l,dart::Color::Gray());
   g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l3");
- 
+  setColor(g_bn_l,dart::Color::Gray());
+
   BodyNode* g_bn_r = addBody(g_pendulum, g_root, "goal_leg_r1", Eigen::Vector3d(0,0,0));
+  setColor(g_bn_r,dart::Color::Black());
   g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r2");
+  setColor(g_bn_r,dart::Color::Black());
   g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r3");
-  
+  setColor(g_bn_r,dart::Color::Black());
+
   //totdof=10 //cout<<g_pendulum->getNumDofs()<<endl;
+  set_default(g_pendulum, def_pos);
+  /*
   g_pendulum->getDof(2)->setPosition(180*M_PI/180.0); //torso
   g_pendulum->getDof(5)->setPosition(90*M_PI/180.0); //left foot
   g_pendulum->getDof(8)->setPosition(90*M_PI/180.0); //right foot
-
+  */
 
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
