@@ -32,6 +32,7 @@
 
 #include <dart/dart.hpp>
 #include <dart/gui/gui.hpp>
+#include <chrono>
 #include "fsm.h"
 #define EPSILON 0.0001
 const double default_height = 1.0; // m
@@ -83,11 +84,13 @@ class MyWindow : public dart::gui::SimWindow
 public:
 
   /// Constructor
-  MyWindow(WorldPtr world)
+  MyWindow(WorldPtr world, FSM* fsm)
     : mBallConstraint(nullptr),
       mPositiveSign(true),
       mBodyForce(false),
-      mPD(false)
+      mPD(false),
+      automode(false),
+      mFSM(fsm)
   {
     setWorld(world);
 
@@ -109,6 +112,8 @@ public:
     // Set PD control gains
     mKpPD = 200.0;
     mKdPD = 20.0;
+    
+    start = std::chrono::system_clock::now();
   }
 
   void changeDirection()
@@ -270,15 +275,20 @@ public:
         //setPDForces();
         //applyForce(9);
         break;
-      case 'c':
-        step++;
-        cur_p_idx= (cur_p_idx+1)% P_NUM;
-        cout<<"cur_p_idx"<<endl;
-        goalPos= goalPoses.col(cur_p_idx);
-        goalPos[0]= 0.5*(step/2); 
-        cout<<goalPos.transpose()<<endl;
+      case 'n':
+        if(!automode){ // go to next state
+            step++;
+            cur_p_idx= (cur_p_idx+1)% P_NUM;
+            cout<<"cur_p_idx"<<endl;
+            goalPos= goalPoses.col(cur_p_idx);
+            goalPos[0]= 0.5*(step/2); 
+            cout<<goalPos.transpose()<<endl;
+        }
         break;
-
+      case 'c':
+        //change the mode
+        automode=!automode;
+        break;
       case 'q':
         changeRestPosition(delta_rest_position);
         break;
@@ -397,6 +407,19 @@ public:
     
     // Step the simulation forward
     SimWindow::timeStepping();
+    
+    if(automode){
+        chrono::system_clock::time_point now= std::chrono::system_clock::now();
+        float diff=(float) std::chrono::duration_cast<std::chrono::milliseconds> (now-start).count();
+        if(diff > mFSM->get_cur_duration()) {
+            mFSM->goto_next_state();
+            goalPos= mFSM->get_goalPos();
+            step++;
+            goalPos[0]= 0.5*(step/2);
+            start= now;
+        }
+
+    }
     for (int i=0;i<tot_dof;i++){
         //if(i==2) mWorld->getSkeleton("goal_pendulum")->getRootBodyNode()->setProperties
         mWorld->getSkeleton("goal_pendulum")->setPosition(i, goalPos[i]);
@@ -434,7 +457,11 @@ protected:
   Eigen::VectorXd mForces;
 
   // True if using PD control (change by '0' keyboard)
-  bool mPD; 
+  bool mPD;
+
+  bool automode;
+  chrono::system_clock::time_point start;
+  FSM* mFSM;
 
 };
 
@@ -681,10 +708,10 @@ int main(int argc, char* argv[])
     goalPos_2 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180;
     goalPos_3 << 0.5, 0, 180*M_PI/180, -30*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
     
-    FSM_state s0 (0.05, 9, goalPos_0);
-    FSM_state s1 (0.05, 9, goalPos_1);
-    FSM_state s2 (0.05, 9, goalPos_2);
-    FSM_state s3 (0.05, 9, goalPos_3);
+    FSM_state s0 (50, 9, goalPos_0);
+    FSM_state s1 (50, 9, goalPos_1);
+    FSM_state s2 (50, 9, goalPos_2);
+    FSM_state s3 (50, 9, goalPos_3);
 
     FSM fsm=FSM();
     fsm.add_state(s0);
@@ -695,7 +722,9 @@ int main(int argc, char* argv[])
     fsm.add_transition(transition(1, 0, 2));
     fsm.add_transition(transition(2, 0, 3));
     fsm.add_transition(transition(3, 0, 0));
+    fsm.set_start();
 
+    fsm.print_fsm();
     goalPoses << goalPos_0, goalPos_1, goalPos_2, goalPos_3;
     cur_p_idx=0;
     goalPos= goalPoses.col(cur_p_idx); //goalPos_1;
@@ -774,7 +803,7 @@ int main(int argc, char* argv[])
 
   world->setGravity(Vector3d(0,-9.8,0));
   // Create a window for rendering the world and handling user input
-  MyWindow window(world);
+  MyWindow window(world, &fsm);
 
   //print_Skeleton(pendulum);
   // Print instructions
