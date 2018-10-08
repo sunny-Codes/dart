@@ -79,6 +79,23 @@ VectorXd goalPos_1(tot_dof);
 VectorXd goalPos_2(tot_dof);
 VectorXd goalPos_3(tot_dof);
 
+void setHideOrShow(SkeletonPtr skel, bool hide){
+    if(hide){
+        for( int i=0; i<skel->getNumShapeNodes(); i++){
+            skel->getShapeNode(i)->getVisualAspect()->hide();
+        }
+    }else{
+        for( int i=0; i<skel->getNumShapeNodes(); i++){
+            skel->getShapeNode(i)->getVisualAspect()->show();
+        }
+    }
+}
+void setColor(BodyNode * bn, Vector3d color){
+    for( int i=0; i<bn->getNumShapeNodes(); i++){
+        bn->getShapeNode(i)->getVisualAspect()->setColor(color);
+    }
+}
+
 class MyWindow : public dart::gui::SimWindow
 {
 public:
@@ -90,6 +107,7 @@ public:
       mBodyForce(false),
       mPD(false),
       automode(false),
+      hide(false),
       mFSM(fsm)
   {
     setWorld(world);
@@ -110,8 +128,8 @@ public:
              arrow_properties, dart::Color::Orange(1.0)));
 
     // Set PD control gains
-    mKpPD = 200.0;
-    mKdPD = 20.0;
+    mKpPD = 100.0;
+    mKdPD = 10.0;
     
     start = std::chrono::system_clock::now();
   }
@@ -279,10 +297,10 @@ public:
         if(!automode){ // go to next state
             step++;
             cur_p_idx= (cur_p_idx+1)% P_NUM;
-            cout<<"cur_p_idx"<<endl;
+            //cout<<"cur_p_idx"<<endl;
             goalPos= goalPoses.col(cur_p_idx);
-            goalPos[0]= 0.5*(step/2); 
-            cout<<goalPos.transpose()<<endl;
+            goalPos[0]= 0.5*(step/2)+ 0.2*(step%2); 
+            //cout<<goalPos.transpose()<<endl;
         }
         break;
       case 'c':
@@ -323,6 +341,11 @@ public:
         mBodyForce = !mBodyForce;
         break;
 
+      case 'h':
+        // hide the goal pendulum
+        hide= !hide;
+        setHideOrShow(mWorld->getSkeleton("goal_pendulum"), hide);
+        break;
       default:
         SimWindow::keyboard(key, x, y);
     }
@@ -415,7 +438,7 @@ public:
             mFSM->goto_next_state();
             goalPos= mFSM->get_goalPos();
             step++;
-            goalPos[0]= 0.5*(step/2);
+            goalPos[0]= 0.5*(step/2)+ 0.2*(step%2);
             start= now;
         }
 
@@ -460,6 +483,7 @@ protected:
   bool mPD;
 
   bool automode;
+  bool hide;
   chrono::system_clock::time_point start;
   FSM* mFSM;
 
@@ -607,11 +631,6 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   return bn;
 }
 
-void setColor(BodyNode * bn, Vector3d color){
-    for( int i=0; i<bn->getNumShapeNodes(); i++){
-        bn->getShapeNode(i)->getVisualAspect()->setColor(color);
-    }
-}
 /*
 SkeletonPtr createBall()
 {
@@ -703,15 +722,15 @@ int main(int argc, char* argv[])
     VectorXd def_pos(9);
     def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
 
-    goalPos_0 << 0, 0, 180*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180, 0, 0, 90*M_PI/180 ;
-    goalPos_1 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, -30*M_PI/180, 0, 90*M_PI/180 ;
-    goalPos_2 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180;
-    goalPos_3 << 0.5, 0, 180*M_PI/180, -30*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
+    goalPos_0 << 0, 0, 180*M_PI/180, 45*M_PI/180, -90*M_PI/180.0, 100*M_PI/180, 0, 0, 90*M_PI/180 ;
+    goalPos_1 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180 ;
+    goalPos_2 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 45*M_PI/180, -90*M_PI/180.0, 100*M_PI/180;
+    goalPos_3 << 0.5, 0, 180*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
     
-    FSM_state s0 (50, 9, goalPos_0);
-    FSM_state s1 (50, 9, goalPos_1);
-    FSM_state s2 (50, 9, goalPos_2);
-    FSM_state s3 (50, 9, goalPos_3);
+    FSM_state s0 (300, 9, goalPos_0);
+    FSM_state s1 (300, 9, goalPos_1);
+    FSM_state s2 (300, 9, goalPos_2);
+    FSM_state s3 (300, 9, goalPos_3);
 
     FSM fsm=FSM();
     fsm.add_state(s0);

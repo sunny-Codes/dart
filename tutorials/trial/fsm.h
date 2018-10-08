@@ -59,18 +59,14 @@ class FSM{
         int cur_state;
 };
 void FSM::goto_next_state(int input){
-    cout<<"cur state: "<<cur_state<<endl;
-    cout<<"input: "<<input<<endl;
     for(int i=0; i<transitions.size(); i++){
-        transitions[i].print();
+        //transitions[i].print();
         if((transitions[i].from==cur_state) && (transitions[i].input==input)){
-            cout<<"to: "<<transitions[i].to<<endl;
             cur_state= transitions[i].to;
-            cout<<"cur_state changed:"<<cur_state<<endl;
             break;
         }
     }
-    cout<<get_goalPos()<<endl;
+    //cout<<get_goalPos()<<endl;
 }
 
 
