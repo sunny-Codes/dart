@@ -32,6 +32,9 @@
 
 #include <dart/dart.hpp>
 #include <dart/gui/gui.hpp>
+//#include <boost/python.hpp>
+//#include <boost/python/list.hpp>
+
 #include <chrono>
 #include "fsm.h"
 #define EPSILON 0.0001
@@ -78,6 +81,7 @@ VectorXd goalPos_0(tot_dof);
 VectorXd goalPos_1(tot_dof);
 VectorXd goalPos_2(tot_dof);
 VectorXd goalPos_3(tot_dof);
+
 
 void setHideOrShow(SkeletonPtr skel, bool hide){
     if(hide){
@@ -134,6 +138,7 @@ public:
     start = std::chrono::system_clock::now();
   }
 
+  
   void changeDirection()
   {
     mPositiveSign = !mPositiveSign;
@@ -587,7 +592,7 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
 
 
 BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
-                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0), Vector3d color=dart::Color::Blue())
+                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0))
 {
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
@@ -596,15 +601,7 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   Eigen::Isometry3d tf_1(Eigen::Isometry3d::Identity());
   properties.mT_ParentBodyToJoint= tf_1;
   
-  //ADDED
-  /*tf_1.linear()= dart::math::eulerXYZToMatrix(
-          Eigen::Vector3d(0,0,30*M_PI/180));
-  Eigen::Isometry3d tf_2(Eigen::Isometry3d::Identity());
-  tf_2.translation()= Eigen::Vector3d(0,-default_height,0);
-  properties.mT_ParentBodyToJoint= tf_1*tf_2;
-  */
   properties.mT_ParentBodyToJoint.translation() = parentBodyToJoint;
-      //Eigen::Vector3d(0,-default_height,0);
   properties.mRestPositions[0] = default_rest_position;
   properties.mSpringStiffnesses[0] = default_stiffness;
   properties.mDampingCoefficients[0] = default_damping;
@@ -626,30 +623,10 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   shapeNode->setRelativeTransform(tf);
 
   // Set the geometry of the Body
-  setGeometry(bn); //, color);
+  setGeometry(bn);
 
   return bn;
 }
-
-/*
-SkeletonPtr createBall()
-{
-  SkeletonPtr ball = Skeleton::create("rigid_ball");
-
-  // Give the ball a body
-  addRigidBody<FreeJoint>(ball, "rigid ball", Shape::ELLIPSOID);
-
-  setAllColors(ball, dart::Color::Red());
-  
-  // Set the starting position for the object
-  Eigen::Vector6d positions(Eigen::Vector6d::Zero());
-  positions[4]=10;
-  positions[5]=20;
-  ball->getJoint(0)->setPositions(positions);
-
-  return ball;
-}
-*/
 
 void print_bn(BodyNodePtr & bn){
     Eigen::Isometry3d tf= bn->getWorldTransform();
@@ -666,24 +643,6 @@ void print_Skeleton(SkeletonPtr skel){
         print_bn(bn);
     }
 }
-
-
-SkeletonPtr createGround()
-{
-  SkeletonPtr ground = Skeleton::create("ground");
-
-  BodyNode* bn = ground->createJointAndBodyNodePair<WeldJoint>().second;
-
-  std::shared_ptr<BoxShape> shape = std::make_shared<BoxShape>(
-        Eigen::Vector3d(default_ground_width, default_ground_width,
-                        default_wall_thickness));
-  auto shapeNode
-      = bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
-  shapeNode->getVisualAspect()->setColor(Eigen::Vector3d(1.0, 1.0, 1.0));
-
-  return ground;
-}
-
 
 SkeletonPtr createFloor()
 {
@@ -710,6 +669,9 @@ SkeletonPtr createFloor()
   return floor;
 }
 
+
+///// functions needed in simulation (main)
+
 void set_default(SkeletonPtr skel, VectorXd def_pos){
     for (int i=0; i<skel->getNumDofs(); i++){
         skel->setPosition(i, def_pos[i]);
@@ -717,6 +679,7 @@ void set_default(SkeletonPtr skel, VectorXd def_pos){
 }
 
 int main(int argc, char* argv[])
+//void simulation()
 {
 
     VectorXd def_pos(9);
@@ -794,13 +757,7 @@ int main(int argc, char* argv[])
   g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r3");
   setColor(g_bn_r,dart::Color::Black());
 
-  //totdof=10 //cout<<g_pendulum->getNumDofs()<<endl;
   set_default(g_pendulum, def_pos);
-  /*
-  g_pendulum->getDof(2)->setPosition(180*M_PI/180.0); //torso
-  g_pendulum->getDof(5)->setPosition(90*M_PI/180.0); //left foot
-  g_pendulum->getDof(8)->setPosition(90*M_PI/180.0); //right foot
-  */
 
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
@@ -844,3 +801,20 @@ int main(int argc, char* argv[])
   window.initWindow(1080, 810, "2D walking body");
   glutMainLoop();
 }
+
+/*
+using namespace boost::python;
+
+BOOST_PYTHON_MODULE(cp)
+{
+    class_<Simulation>("Simulation",init<>())
+            .def("init",&Simulation::init)
+            .def("step",&Simulation::step)
+            .def("reset",&Simulation::reset)
+            .def("getState",&Simulation::getState)
+            .def("setAction",&Simulation::setAction)
+            .def("getReward",&Simulation::getReward)
+            .def("getDone",&Simulation::getDone);
+}
+
+*/
