@@ -39,13 +39,14 @@ class FSM{
     public:
         FSM(){ state_num=0; cur_state=-1; }
         FSM_state get_state(int i){ return states[i]; }
+        int get_cur_state_n() {return cur_state; }
         VectorXd get_goalPos(){return states[cur_state].get_goalPos(); }
         float get_cur_duration(){return states[cur_state].get_duration_time(); }
         void add_state(FSM_state newstate) {states.push_back(newstate); state_num++; }
         void add_transition(transition newtr) {transitions.push_back(newtr); }
-        void goto_next_state(int input=0);
+        int goto_next_state(int input=0);
         void set_start(){
-            if(state_num!=0) cur_state=0;
+            if(state_num>=2) cur_state=1;
         }
         void print_fsm(){
             for(int i=0; i<state_num; i++){
@@ -58,7 +59,7 @@ class FSM{
         int state_num;
         int cur_state;
 };
-void FSM::goto_next_state(int input){
+int FSM::goto_next_state(int input){
     for(int i=0; i<transitions.size(); i++){
         //transitions[i].print();
         if((transitions[i].from==cur_state) && (transitions[i].input==input)){
@@ -66,6 +67,7 @@ void FSM::goto_next_state(int input){
             break;
         }
     }
+    return cur_state;
     //cout<<get_goalPos()<<endl;
 }
 

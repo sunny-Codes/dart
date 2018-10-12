@@ -109,7 +109,7 @@ public:
     : mBallConstraint(nullptr),
       mPositiveSign(true),
       mBodyForce(false),
-      mPD(false),
+      mPD(true),
       automode(false),
       hide(false),
       mFSM(fsm)
@@ -132,8 +132,8 @@ public:
              arrow_properties, dart::Color::Orange(1.0)));
 
     // Set PD control gains
-    mKpPD = 100.0;
-    mKdPD = 10.0;
+    mKpPD = 300.0;
+    mKdPD = 30.0;
     
     start = std::chrono::system_clock::now();
   }
@@ -249,10 +249,21 @@ public:
     
     //const Eigen::VectorXd& Cg = mPendulum->getCoriolisAndGravityForces();
 
+    q_err[0]=0;
+    q_err[1]=0;
+    dq_err[0]=0;
+    dq_err[1]=0;
+    int swinghip= (mFSM->get_cur_state_n()<=1)? 3:6;
+    int standhip= (mFSM->get_cur_state_n()<=1)? 6:3;
+    
     // Compute the desired joint forces
-    const Eigen::MatrixXd& M = mPendulum->getMassMatrix();
-    mForces = M * (mKpPD * q_err + mKdPD * dq_err) ; //+ Cg;
+    //const Eigen::MatrixXd& M = mPendulum->getMassMatrix();
+    mForces = (mKpPD * q_err + mKdPD * dq_err) ; // M*F+ Cg;
 
+    cout<<"pd force : "<<mForces.transpose()<<endl;
+    cout<<"standhip: "<<standhip<<"|| "<<mForces[standhip];
+    mForces[standhip]= -mForces[2]-mForces[swinghip];
+    cout<<" -> "<<mForces[standhip]<<endl;
     mPendulum->setForces(mForces);
   }
 
@@ -294,8 +305,8 @@ public:
         applyForce(8);
         break;
       case '0':
-        mPD= !mPD;
-        //setPDForces();
+        //mPD= !mPD;
+        setPDForces();
         //applyForce(9);
         break;
       case 'n':
@@ -304,7 +315,7 @@ public:
             cur_p_idx= (cur_p_idx+1)% P_NUM;
             //cout<<"cur_p_idx"<<endl;
             goalPos= goalPoses.col(cur_p_idx);
-            goalPos[0]= 0.5*(step/2)+ 0.2*(step%2); 
+            //goalPos[0]= 0.5*(step/2)+ 0.3*(step%2); 
             //cout<<goalPos.transpose()<<endl;
         }
         break;
@@ -440,10 +451,10 @@ public:
         chrono::system_clock::time_point now= std::chrono::system_clock::now();
         float diff=(float) std::chrono::duration_cast<std::chrono::milliseconds> (now-start).count();
         if(diff > mFSM->get_cur_duration()) {
-            mFSM->goto_next_state();
+            int cur_state= mFSM->goto_next_state();
             goalPos= mFSM->get_goalPos();
             step++;
-            goalPos[0]= 0.5*(step/2)+ 0.2*(step%2);
+            //goalPos[0]= 0.5*(step/2)+ 0.2*(step%2);
             start= now;
         }
 
@@ -494,9 +505,13 @@ protected:
 
 };
 
-void setGeometry(const BodyNodePtr& bn,float _width=default_width, float _depth=default_depth, float _height=default_height)
+void setGeometry(const BodyNodePtr& bn, Vector3d geometry=Vector3d(default_width, default_depth, default_height) )
+    // float _width=default_width, float _depth=default_depth, float _height=default_height)
 {
-  // Create a BoxShape to be used for both visualization and collision checking
+  float _width= geometry[0];
+  float _depth= geometry[1];
+  float _height= geometry[2];
+    // Create a BoxShape to be used for both visualization and collision checking
   std::shared_ptr<BoxShape> box(new BoxShape(
       Eigen::Vector3d(_width, _height, _depth)));
 
@@ -592,7 +607,8 @@ BodyNode* makeTranslational2DRootBody(const SkeletonPtr& pendulum, const std::st
 
 
 BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
-                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0))
+                  const std::string& name, Eigen::Vector3d parentBodyToJoint= Vector3d(0,- default_height, 0), 
+                  Vector3d geometry=Vector3d(default_width, default_depth, default_height))
 {
   // Set up the properties for the Joint
   RevoluteJoint::Properties properties;
@@ -623,7 +639,7 @@ BodyNode* addBody(const SkeletonPtr& pendulum, BodyNode* parent,
   shapeNode->setRelativeTransform(tf);
 
   // Set the geometry of the Body
-  setGeometry(bn);
+  setGeometry(bn, geometry);
 
   return bn;
 }
@@ -685,15 +701,26 @@ int main(int argc, char* argv[])
     VectorXd def_pos(9);
     def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
 
-    goalPos_0 << 0, 0, 180*M_PI/180, 45*M_PI/180, -90*M_PI/180.0, 100*M_PI/180, 0, 0, 90*M_PI/180 ;
-    goalPos_1 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180 ;
-    goalPos_2 << 0.5, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 45*M_PI/180, -90*M_PI/180.0, 100*M_PI/180;
-    goalPos_3 << 0.5, 0, 180*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
-    
+    /*
+    goalPos_0 << 0, 0, 180*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180, 0, 0, 90*M_PI/180 ;
+    goalPos_1 << 0, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180 ;
+    goalPos_2 << 0, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180;
+    goalPos_3 << 0, 0, 180*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
+    */
+
+    //0,2 stance, 1,3 foot strike
+    //0: 012 swh swk swa sth* stk sta 
+    float ank= 0.5*M_PI+0.2;
+    goalPos_0<< 0, 0, 180*M_PI/180, 0.4, -1.1, ank, 0, -0.05, ank;
+    goalPos_1<< 0, 0, 180*M_PI/180, -0.7, -0.05, ank, 0, -0.1, ank;
+    goalPos_2<< 0, 0, 180*M_PI/180, 0, -0.05, ank, 0.4, -1.1, ank;
+    goalPos_3<< 0, 0, 180*M_PI/180, 0, -0.1, ank, -0.7, -0.05, ank;
+
+
     FSM_state s0 (300, 9, goalPos_0);
-    FSM_state s1 (300, 9, goalPos_1);
+    FSM_state s1 (30, 9, goalPos_1);
     FSM_state s2 (300, 9, goalPos_2);
-    FSM_state s3 (300, 9, goalPos_3);
+    FSM_state s3 (30, 9, goalPos_3);
 
     FSM fsm=FSM();
     fsm.add_state(s0);
@@ -708,7 +735,7 @@ int main(int argc, char* argv[])
 
     fsm.print_fsm();
     goalPoses << goalPos_0, goalPos_1, goalPos_2, goalPos_3;
-    cur_p_idx=0;
+    cur_p_idx=1;
     goalPos= goalPoses.col(cur_p_idx); //goalPos_1;
 
 
@@ -721,21 +748,22 @@ int main(int argc, char* argv[])
 
   BodyNode * bn_l = addBody(pendulum, root, "leg_l1", Eigen::Vector3d(0,0,0));
   bn_l = addBody(pendulum, bn_l, "leg_l2");
-  bn_l = addBody(pendulum, bn_l, "leg_l3");
+  bn_l = addBody(pendulum, bn_l, "leg_l3", Vector3d(0, -default_height, 0), Vector3d(default_width, default_depth, default_height/2.0));
   
   BodyNode* bn_r = addBody(pendulum, root, "leg_r1", Eigen::Vector3d(0,0,0));
   bn_r = addBody(pendulum, bn_r, "leg_r2");
-  bn_r = addBody(pendulum, bn_r, "leg_r3");
+  bn_r = addBody(pendulum, bn_r, "leg_r3", Vector3d(0, -default_height, 0), Vector3d(default_width, default_depth, default_height/2.0));
 
   // Set the initial position of the first DegreeOfFreedom so that the pendulum
   // starts to swing right away
-  set_default(pendulum, def_pos);
+  set_default(pendulum, goalPos_0);
+  cout<<"m_pendulum mass matrix: "<<endl<<pendulum->getMassMatrix()<<endl;
   /*
   pendulum->getDof(2)->setPosition(180*M_PI/180.0); //torso
   pendulum->getDof(5)->setPosition(90*M_PI/180.0); //left foot
   pendulum->getDof(8)->setPosition(90*M_PI/180.0); //right foot
 */
-  pendulum->getDof(0)->setPosition(100 * M_PI / 180.0);
+//  pendulum->getDof(0)->setPosition(100 * M_PI / 180.0);
 
   // Create a goal pendulum
   SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
@@ -747,17 +775,17 @@ int main(int argc, char* argv[])
   setColor(g_bn_l,dart::Color::Gray());
   g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l2"); 
   setColor(g_bn_l,dart::Color::Gray());
-  g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l3");
+  g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l3", Vector3d(0, -default_height, 0), Vector3d(default_width, default_depth, default_height/2.0));
   setColor(g_bn_l,dart::Color::Gray());
 
   BodyNode* g_bn_r = addBody(g_pendulum, g_root, "goal_leg_r1", Eigen::Vector3d(0,0,0));
   setColor(g_bn_r,dart::Color::Black());
   g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r2");
   setColor(g_bn_r,dart::Color::Black());
-  g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r3");
+  g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r3",Vector3d(0, -default_height, 0), Vector3d(default_width, default_depth, default_height/2.0));
   setColor(g_bn_r,dart::Color::Black());
 
-  set_default(g_pendulum, def_pos);
+  set_default(g_pendulum, goalPos_1);
 
   for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
       g_pendulum->getBodyNode(i)->setCollidable(false);
