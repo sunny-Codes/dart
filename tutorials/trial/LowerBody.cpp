@@ -31,14 +31,14 @@ SkeletonPtr LowerBody::buildBody(){
   bn_l = addBody_default(skel, bn_l, "leg_l2");
   bn_l = addBody(skel, bn_l, "leg_l3", 
           Vector3d(0, -default_height, 0), Vector3d(0,0,M_PI/2.0), 
-          draw, Vector3d(default_width, default_height/2.0, default_depth),
+          draw, Vector3d(default_width, default_height/4.0, default_depth),
           rest_position, stiffness, damping);
 
   BodyNode * bn_r = addBody(skel, root, "leg_r1", V3_Zero, V3_Zero, draw, bone_geometry, rest_position, stiffness, damping);
   bn_r = addBody_default(skel, bn_r, "leg_r2");
   bn_r = addBody(skel, bn_r, "leg_r3", 
           Vector3d(0, -default_height, 0), Vector3d(0,0,M_PI/2.0), 
-          draw, Vector3d(default_width, default_height/2.0, default_depth),
+          draw, Vector3d(default_width, default_height/4.0, default_depth),
           rest_position, stiffness, damping);
   return skel;
 

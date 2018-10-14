@@ -250,8 +250,10 @@ class MyWindow : public dart::gui::SimWindow
             q_err[1]=0;
             dq_err[0]=0;
             dq_err[1]=0;
-            int swinghip= (mFSM->get_cur_state_n()<=1)? 3:6;
-            int standhip= (mFSM->get_cur_state_n()<=1)? 6:3;
+            int cur_state= mFSM->get_cur_state_n();
+            bool left_swing = (cur_state==0 || cur_state==1);
+            int swinghip= (left_swing)? 3:6;  //3 left, 6 right
+            int standhip= (left_swing)? 6:3;
 
             // Compute the desired joint forces
             //const MatrixXd& M = mPendulum->getMassMatrix();
@@ -259,7 +261,7 @@ class MyWindow : public dart::gui::SimWindow
 
             //cout<<"pd force : "<<mForces.transpose()<<endl;
             //cout<<"standhip: "<<standhip<<"|| "<<mForces[standhip];
-            //mForces[standhip]= -mForces[2]-mForces[swinghip];
+            mForces[standhip]= -mForces[2]-mForces[swinghip];
             //cout<<" -> "<<mForces[standhip]<<endl;
             mPendulum->setForces(mForces);
         }
@@ -302,18 +304,23 @@ class MyWindow : public dart::gui::SimWindow
                     applyForce(8);
                     break;
                 case '0':
-                    //mPD= !mPD;
                     setPDForces();
-                    //applyForce(9);
+                    break;
+                case '/':
+                    mPD= !mPD;
+                    cout<<"mPD now: ";
+                    if(mPD) cout<<"true"<<endl;
+                    else cout<<"false"<<endl;
                     break;
                 case 'n':
                     if(!automode){ // go to next state
-                        step++;
                         cur_p_idx= (cur_p_idx+1)% P_NUM;
                         //cout<<"cur_p_idx"<<endl;
                         goalPos= goalPoses.col(cur_p_idx);
-                        //goalPos[0]= 0.5*(step/2)+ 0.3*(step%2); 
+                        cout<<"State: "<<cur_p_idx<<endl;
                         //cout<<goalPos.transpose()<<endl;
+                    }else{
+                        cout<<"'n' pressed, but now in automode"<<endl;
                     }
                     break;
                 case 'c':
@@ -392,7 +399,6 @@ class MyWindow : public dart::gui::SimWindow
 
 
             if(mPD){
-                cout<<"mPD true"<<endl;
                 setPDForces();
             }
 
@@ -452,8 +458,6 @@ class MyWindow : public dart::gui::SimWindow
                 if(diff > mFSM->get_cur_duration()) {
                     int cur_state= mFSM->goto_next_state();
                     goalPos= mFSM->get_goalPos();
-                    //step++;
-                    //goalPos[0]= 0.5*(step/2)+ 0.2*(step%2);
                     start= now;
                 }
 
@@ -556,8 +560,9 @@ int main(int argc, char* argv[])
 {
 
     VectorXd def_pos(9);
-    def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
+    //def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
 
+    def_pos<< 0,0,0,0,0,0,0,0,0;
     //0,2 stance, 1,3 foot strike
     //0: 012 swh swk swa sth* stk sta 
     float ank= 0.2;
@@ -596,7 +601,7 @@ int main(int argc, char* argv[])
     LowerBody goal_lb("goal", true, default_stiffness, default_damping, default_rest_position);
     goal_lb.setBoneGeometry(Vector3d(default_width, default_height, default_depth));
     SkeletonPtr goal= goal_lb.buildBody();
-    goal_lb.set_default(goalPos_1);
+    goal_lb.set_default(goalPos);
    
     for (int i=0;i<goal->getNumBodyNodes();i++){
         goal->getBodyNode(i)->setCollidable(false);
@@ -615,19 +620,23 @@ int main(int argc, char* argv[])
 
     //print_Skeleton(pendulum);
     // Print instructions
-    std::cout << "space bar: simulation on/off" << std::endl;
-    std::cout << "'p': replay simulation" << std::endl;
-    std::cout << "'1' -> '9': apply torque to a pendulum body" << std::endl;
-    std::cout << "'-': Change sign of applied joint torques" << std::endl;
-    std::cout << "'q': Increase joint rest positions" << std::endl;
-    std::cout << "'a': Decrease joint rest positions" << std::endl;
-    std::cout << "'w': Increase joint spring stiffness" << std::endl;
-    std::cout << "'s': Decrease joint spring stiffness" << std::endl;
-    std::cout << "'e': Increase joint damping" << std::endl;
-    std::cout << "'d': Decrease joint damping" << std::endl;
-    std::cout << "'r': add/remove constraint on the end of the chain" << std::endl;
-    std::cout << "'f': switch between applying joint torques and body forces" << std::endl;
-
+    cout << "space bar: simulation on/off" << endl;
+    cout << "'p': replay simulation" << endl;
+    cout << "'1' -> '9': apply torque to a pendulum body" << endl;
+    cout << "'-': Change sign of applied joint torques" << endl;
+    cout << "'q': Increase joint rest positions" << endl;
+    cout << "'a': Decrease joint rest positions" << endl;
+    cout << "'w': Increase joint spring stiffness" << endl;
+    cout << "'s': Decrease joint spring stiffness" << endl;
+    cout << "'e': Increase joint damping" << endl;
+    cout << "'d': Decrease joint damping" << endl;
+    cout << "'r': add/remove constraint on the end of the chain" << endl;
+    cout << "'f': switch between applying joint torques and body forces" << endl;
+    cout<<"--------- simbicon -----------"<<endl;
+    cout << "'0': apply PD Force" << endl;
+    cout<<"'/': change PD force mode (continuously apply PD Force or not)"<<endl;
+    cout<<"'c': change automode (automode= state changes by time, !automode= state stays there, can change state by 'n')"<<endl;
+    cout<<"'n': if NOT automode- go to next state"<<endl;
     // Initialize glut, initialize the window, and begin the glut event loop
     glutInit(&argc, argv);
     window.initWindow(1080, 810, "2D walking body");
