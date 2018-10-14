@@ -107,7 +107,7 @@ class MyWindow : public dart::gui::SimWindow
             : mBallConstraint(nullptr),
             mPositiveSign(true),
             mBodyForce(false),
-            mPD(false),
+            mPD(true),
             automode(false),
             hide(false),
             mFSM(fsm)
@@ -121,6 +121,7 @@ class MyWindow : public dart::gui::SimWindow
         assert(mPendulum != nullptr);
 
         mForceCountDown.resize(mPendulum->getNumDofs(), 0);
+
         ArrowShape::Properties arrow_properties;
         arrow_properties.mRadius = 0.05;
         mArrow = std::shared_ptr<ArrowShape>(new ArrowShape(
@@ -259,7 +260,7 @@ class MyWindow : public dart::gui::SimWindow
 
             //cout<<"pd force : "<<mForces.transpose()<<endl;
             //cout<<"standhip: "<<standhip<<"|| "<<mForces[standhip];
-            //mForces[standhip]= -mForces[2]-mForces[swinghip];
+            mForces[standhip]= -mForces[2]-mForces[swinghip];
             //cout<<" -> "<<mForces[standhip]<<endl;
             mPendulum->setForces(mForces);
         }
@@ -374,7 +375,6 @@ class MyWindow : public dart::gui::SimWindow
                 auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
                 //for(std::size_t j = 0; j < 1; ++j)
 
-
                 visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
                 if(visualShapeNodes.size()>1){
                     visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
@@ -392,7 +392,6 @@ class MyWindow : public dart::gui::SimWindow
 
 
             if(mPD){
-                cout<<"mPD true"<<endl;
                 setPDForces();
             }
 
@@ -452,7 +451,7 @@ class MyWindow : public dart::gui::SimWindow
                 if(diff > mFSM->get_cur_duration()) {
                     int cur_state= mFSM->goto_next_state();
                     goalPos= mFSM->get_goalPos();
-                    //step++;
+                    step++;
                     //goalPos[0]= 0.5*(step/2)+ 0.2*(step%2);
                     start= now;
                 }
@@ -461,7 +460,7 @@ class MyWindow : public dart::gui::SimWindow
             for (int i=0;i<tot_dof;i++){
                 //if(i==2) mWorld->getSkeleton("goal_pendulum")->getRootBodyNode()->setProperties
                 mWorld->getSkeleton("goal")->setPosition(i, goalPos[i]);
-                
+                cout<<"goal pos: "<<i<<endl;
             }
         }
 
@@ -558,9 +557,16 @@ int main(int argc, char* argv[])
     VectorXd def_pos(9);
     def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
 
+    /*
+       goalPos_0 << 0, 0, 180*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180, 0, 0, 90*M_PI/180 ;
+       goalPos_1 << 0, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180 ;
+       goalPos_2 << 0, 0, 180*M_PI/180, 0, 0, 90*M_PI/180, 30*M_PI/180, -60*M_PI/180.0, 100*M_PI/180;
+       goalPos_3 << 0, 0, 180*M_PI/180, -45*M_PI/180, 0, 90*M_PI/180, 0, 0, 90*M_PI/180 ;
+       */
+
     //0,2 stance, 1,3 foot strike
     //0: 012 swh swk swa sth* stk sta 
-    float ank= 0.2;
+    float ank= 0.5*M_PI+0.2;
     goalPos_0<< 0, 0, 0, 0.4, -1.1, ank, 0, -0.05, ank;
     goalPos_1<< 0, 0, 0, -0.7, -0.05, ank, 0, -0.1, ank;
     goalPos_2<< 0, 0, 0, 0, -0.05, ank, 0.4, -1.1, ank;
@@ -598,9 +604,31 @@ int main(int argc, char* argv[])
     SkeletonPtr goal= goal_lb.buildBody();
     goal_lb.set_default(goalPos_1);
    
-    for (int i=0;i<goal->getNumBodyNodes();i++){
-        goal->getBodyNode(i)->setCollidable(false);
-    }
+
+    /*SkeletonPtr g_pendulum = Skeleton::create("goal_pendulum");
+    BodyNode* g_root = makeTranslational2DRootBody(g_pendulum, "goal_root");
+
+    BodyNode *g_bn_t= addBody(g_pendulum, g_root, "goal_torso", Vector3d(0,0,0) , Vector3d(0,0,M_PI) ); 
+
+    BodyNode* g_bn_l = addBody(g_pendulum, g_root, "goal_leg_l1", Vector3d(0,0,0));
+    setColor(g_bn_l,dart::Color::Gray());
+    g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l2"); 
+    setColor(g_bn_l,dart::Color::Gray());
+    g_bn_l = addBody(g_pendulum, g_bn_l, "goal_leg_l3", Vector3d(0, -default_height, 0), Vector3d(0,0,0), Vector3d(default_width, default_height/2.0, default_depth));
+    setColor(g_bn_l,dart::Color::Gray());
+
+    BodyNode* g_bn_r = addBody(g_pendulum, g_root, "goal_leg_r1", Vector3d(0,0,0));
+    setColor(g_bn_r,dart::Color::Black());
+    g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r2");
+    setColor(g_bn_r,dart::Color::Black());
+    g_bn_r = addBody(g_pendulum, g_bn_r, "goal_leg_r3",Vector3d(0, -default_height, 0), Vector3d(0,0,0), Vector3d(default_width, default_height/2.0, default_depth));
+    setColor(g_bn_r,dart::Color::Black());
+*/
+
+        /*
+    for (int i=0;i<g_pendulum->getNumBodyNodes();i++){
+        g_pendulum->getBodyNode(i)->setCollidable(false);
+    }*/
 
     // Create a world and add the pendulum to the world
     WorldPtr world= std::make_shared<World>();
