@@ -1,0 +1,27 @@
+0) cur_state=1: goal_pos=1, (i am somewhere btw goalpos 0 and 1??? -> reaches 2(?) )
+1) siwng hip= left  when ? cur_state==1 | cur_state==2
+2) initial pos and goal(state)
+3) each state time (0->1 0.3s means state 1 is 300?)
+
+now best
+0) 
+1) 0,3 
+2) init=0/ goal=1
+3) 300, 30, 300, 30
+
+but i think it should be
+0)
+1) 0,1 
+2) init 0/ goal 1
+3) 300, 30, 300, 30
+=>>>> it goes with very small footstep size
+>>>>> with footsize 1/4, it goes even better(larger stepsize).... haha
+=>>>>> with footsize 1/8, it goes a bit stiff, but it still goes well.... haha
+=>>>>> with footsize 1, it goes back a bit, and then goes forward with really tiny stepsize(almost inplace)
+
+=>>>> if(3)is 30, 300, 30, 300 then it goes backward one step, and it just falls down
+
+
+'TODO
+impelment "FOOT_CONTACT"
+(state changes after foot contact)
