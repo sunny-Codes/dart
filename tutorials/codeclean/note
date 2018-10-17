@@ -25,3 +25,10 @@ but i think it should be
 'TODO
 impelment "FOOT_CONTACT"
 (state changes after foot contact)
+
+
+1017
+now code refactoroing
+- default_height defined in Controller
+- Controller -applyPDForce : torso control is attached here haha
+

@@ -10,6 +10,7 @@ class LowerBody: public Character{
         LowerBody(string _name, bool _draw, float _stiffness, float _damping, float _rest_position): 
             Character(_name, _draw, _stiffness, _damping, _rest_position){}
         void setBoneGeometry(Vector3d bg){ bone_geometry= bg; }
+         void setDefault(VectorXd def_pos);
         /*void set_torso_cst();
         void set_thigh_cst();
         void set_tibia_cst();
@@ -21,7 +22,6 @@ class LowerBody: public Character{
         BodyNode * addBody_default(const SkeletonPtr &skel, BodyNode*parent, const string& name);
 
         Vector3d V3_Zero=Vector3d(0,0,0);
-        string name;
         
         Vector3d bone_geometry;
 };

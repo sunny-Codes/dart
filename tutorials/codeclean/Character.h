@@ -6,17 +6,22 @@ class Character{
     public:
         Character(string _name): name(_name){}
         Character(string _name, bool _draw, float _stiffness, float _damping, float _rest_position): 
-            name(_name), draw(_draw), stiffness(_stiffness), damping(_damping), rest_position(_rest_position){}
+            name(_name), draw(_draw), stiffness(_stiffness), damping(_damping), rest_position(_rest_position){
+                cout<<name<<endl;
+                cout<<draw<<endl;
+                cout<<stiffness<<endl;
+                cout<<damping<<endl;
+                cout<<rest_position<<endl;
+            }
         //void setBoneGeometry(Vector3d bg){ bone_geometry= bg; }
 
-        void setDefault(VectorXd def_pos);
-        void changeRestPosition(double delta);
+       void changeRestPosition(double delta);
         void changeStiffness(double delta);
         void changeDamping(double delta);
-        
-        virtual SkeletonPtr buildBody();
+        SkeletonPtr getSkeletonPtr(){return skel;}
+        //virtual SkeletonPtr buildBody();
 
-    private:
+    protected:
         string name;
 
         //share(maybe)
