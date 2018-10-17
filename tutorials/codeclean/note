@@ -31,4 +31,8 @@ impelment "FOOT_CONTACT"
 now code refactoroing
 - default_height defined in Controller
 - Controller -applyPDForce : torso control is attached here haha
+- goal의 dof값들만 따로 어레이를 만들고, 이걸 goal로 하고,
+MyWindow에서 render가 필요한 경우에만, 이걸 인풋으로  skeleton만들어서 보여주기
+(즉, 렌더 안하는 버전 필요, 그러려면 dof랑 스켈레톤 그리는거랑 분리해야해)
 
+대충, simbicon csimul에 있는 window랑 world 구분해놓은것처럼..

@@ -21,16 +21,17 @@ const double default_depth = EPSILON;  // m
 class Controller{
     public:
         Controller(SkeletonPtr _skel,double _mKpPD, double _mKdPD)
-            : skel(_skel), mKpPD(_mKpPD), mKdPD(_mKdPD)  {mPDmode=false;}
+            : skel(_skel), mKpPD(_mKpPD), mKdPD(_mKdPD)  {mPDmode=false; mBodyForce= true; }
         Controller(SkeletonPtr _skel,double _mKpPD, double _mKdPD , FSM* fsm) 
             : skel(_skel), mFSM(fsm) , mKpPD(_mKpPD), mKdPD(_mKdPD)
-            {mPDmode=true; mGoalPos=fsm->get_goalPos(); }
+            {mPDmode=true; mGoalPos=fsm->get_goalPos(); mBodyForce=true; }
         void timeStepping();
         void changeForceDirection();
         void applyForce(std::size_t index);
         void applyPDForces(VectorXd goalPos);
         void setFSM(FSM* fsm){mFSM=fsm; mPDmode=true; mGoalPos=fsm->get_goalPos();}
         void changePDmode(){mPDmode= !mPDmode; }
+        void changeBodyForce(){mBodyForce= !mBodyForce;}
         bool usePDcontrol(){return mPDmode;}
         void setGoalPos(VectorXd newGoalPos){mGoalPos=newGoalPos; }
         vector<int> mForceCountDown;
