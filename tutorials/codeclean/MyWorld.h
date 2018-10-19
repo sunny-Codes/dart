@@ -29,11 +29,11 @@
  *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *   POSSIBILITY OF SUCH DAMAGE.
  */
-#include "Character.h"
-#include "LowerBody.h"
+#include "LowerBodyBuilder.h"
 #include "Controller.h"
 #include "fsm.h"
 #include "dart_basic.h"
+//#include "MyWindow.h"
 #include <chrono>
 //#include <boost/python.hpp>
 //#include <boost/python/list.hpp>
@@ -59,19 +59,28 @@ VectorXd goalPos_1(tot_dof);
 VectorXd goalPos_2(tot_dof);
 VectorXd goalPos_3(tot_dof);
 
-class MyWindow : public dart::gui::SimWindow
+class MyWorld
 {
     public:
 
         /// Constructor
-        MyWindow(WorldPtr world, FSM* fsm, Character *character);
-        void keyboard(unsigned char key, int x, int y) override;
-        void timeStepping() override;
+        MyWorld(WorldPtr world, FSM* fsm); // Character *character);
+        void keyboard(unsigned char key, int x, int y); // override;
+        void timeStepping();// override;
+        void printKeyboardInstruction();
+        dart::gui::SimWindow mWindow;
+         
+        bool doRender();
+
     protected:
-        Character *mCharacter;
-        SkeletonPtr mCharacterSkelPtr;
+        bool render;
+       
+        SkeletonPtr mCharacter;
+        SkeletonPtr mGoalVisualize; // not null only when "render"
+
+        //SkeletonPtr mCharacterSkelPtr;
         FSM* mFSM;
         Controller * mController;
-
+        
         bool hide;
 }; 

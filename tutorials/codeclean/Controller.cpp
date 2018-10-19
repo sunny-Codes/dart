@@ -1,6 +1,6 @@
 #include "Controller.h"
 
-void Controller::timeStepping(){
+void Controller::timeStepping(bool render){
     if(mPDmode){
         applyPDForces(mGoalPos);
     }
@@ -15,11 +15,11 @@ void Controller::timeStepping(){
                 DegreeOfFreedom* dof = skel->getDof(i);
                 dof->setForce( mForceDirection? default_torque : -default_torque );
 
-                /*
-                BodyNode* bn = dof->getChildBodyNode();
-                auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
-                visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Red());
-                */
+                if(render){
+                    BodyNode* bn = dof->getChildBodyNode();
+                    auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
+                    visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Red());
+                }
                 --mForceCountDown[i];
             }
         }
@@ -42,11 +42,11 @@ void Controller::timeStepping(){
                 }
                 bn->addExtForce(force, location, true, true);
 
-                /*
-                auto shapeNodes = bn->getShapeNodesWith<VisualAspect>();
-                shapeNodes[1]->getVisualAspect()->setColor(dart::Color::Red());
-                bn->createShapeNodeWith<VisualAspect>(mArrow);
-                */
+                if(render){
+                    auto shapeNodes = bn->getShapeNodesWith<VisualAspect>();
+                    shapeNodes[1]->getVisualAspect()->setColor(dart::Color::Red());
+                    bn->createShapeNodeWith<VisualAspect>(mArrow);
+                }
                 --mForceCountDown[i];
             }
         }

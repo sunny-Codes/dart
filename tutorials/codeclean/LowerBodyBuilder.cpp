@@ -1,11 +1,5 @@
-#include "LowerBody.h"
-void LowerBody::setDefault(VectorXd def_pos){
-    for (int i=0; i<skel->getNumDofs(); i++){
-        skel->setPosition(i, def_pos[i]);
-    }
-}
-
-BodyNode* LowerBody::addBody_default (
+#include "LowerBodyBuilder.h"
+BodyNode* LowerBodyBuilder::addBody_default (
         const SkeletonPtr& skel,
         BodyNode* parent, 
         const string& name){
@@ -15,8 +9,8 @@ BodyNode* LowerBody::addBody_default (
             rest_position, stiffness, damping);
 }
 
-SkeletonPtr LowerBody::buildBody(){
-    skel = Skeleton::create(name);
+SkeletonPtr LowerBodyBuilder::buildBody(string name){
+    SkeletonPtr skel = Skeleton::create(name);
 
     // Add each body to the last BodyNode in the skel
     BodyNode* root = makeTranslational2DRootBody(skel, "root", draw, bone_geometry[0], bone_geometry[2], Vector2d(0,0), stiffness, damping);

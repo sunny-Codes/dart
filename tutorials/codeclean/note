@@ -36,3 +36,17 @@ MyWindow에서 render가 필요한 경우에만, 이걸 인풋으로  skeleton�
 (즉, 렌더 안하는 버전 필요, 그러려면 dof랑 스켈레톤 그리는거랑 분리해야해)
 
 대충, simbicon csimul에 있는 window랑 world 구분해놓은것처럼..
+
+지금 하는 중인데
+키보드를 어떻게 할까 고민중- variable이 다 world관련이라서.. 그냥 하까??
+
+
+우앙 몰라 집에 갈랭
+
+1019
+음.. character을 만든게 어떻게 해야할지 모르겠음
+원래는 world->addskeleton하고, 
+mWorld(worldptr mworld)건네줘서, controlcharacter= mWorld->getSkeleton() 이렇게하는데
+
+지금처럼  character(skeleton) 만들고,
+world->addskeleton(skeleton).. world->getSkeleton하면 character은 왜 만든거야?

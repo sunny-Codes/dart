@@ -1,6 +1,6 @@
-#include "Character.h"
+#include "CharacterBuilder.h"
 
-void Character::changeRestPosition(double delta)
+void changeRestPosition(SkeletonPtr skel, double delta)
 {
     for(std::size_t i = 0; i < skel->getNumDofs(); ++i)
     {
@@ -20,7 +20,7 @@ void Character::changeRestPosition(double delta)
     // skel->getDof(2)->setRestPosition(0.0);
 }
 
-void Character::changeStiffness(double delta)
+void changeStiffness( SkeletonPtr skel, double delta)
 {
     for(std::size_t i = 0; i < skel->getNumDofs(); ++i)
     {
@@ -32,7 +32,7 @@ void Character::changeStiffness(double delta)
     }
 }
 
-void Character::changeDamping(double delta)
+void changeDamping(SkeletonPtr skel,  double delta)
 {
     for(std::size_t i = 0; i < skel->getNumDofs(); ++i)
     {
@@ -41,6 +41,18 @@ void Character::changeDamping(double delta)
         if(damping < 0.0)
             damping = 0.0;
         dof->setDampingCoefficient(damping);
+    }
+}
+
+void setPosition(SkeletonPtr skel, VectorXd def_pos){
+    for (int i=0; i<skel->getNumDofs(); i++){
+        skel->setPosition(i, def_pos[i]);
+    }
+}
+
+void setCollidable(SkeletonPtr skel){
+    for (int i=0;i<skel->getNumBodyNodes();i++){
+        skel->getBodyNode(i)->setCollidable(false);
     }
 }
 

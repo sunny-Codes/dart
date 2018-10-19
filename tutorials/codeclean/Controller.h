@@ -25,7 +25,7 @@ class Controller{
         Controller(SkeletonPtr _skel,double _mKpPD, double _mKdPD , FSM* fsm) 
             : skel(_skel), mFSM(fsm) , mKpPD(_mKpPD), mKdPD(_mKdPD)
             {mPDmode=true; mGoalPos=fsm->get_goalPos(); mBodyForce=true; }
-        void timeStepping();
+        void timeStepping(bool render);
         void changeForceDirection();
         void applyForce(std::size_t index);
         void applyPDForces(VectorXd goalPos);
