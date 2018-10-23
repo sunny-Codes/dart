@@ -29,6 +29,8 @@
  *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *   POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
 #include "LowerBodyBuilder.h"
 #include "Controller.h"
 #include "fsm.h"
@@ -88,4 +90,5 @@ class MyWorld : public dart::simulation::World
         Controller * mController;
         
         bool hide;
-}; 
+};
+*/

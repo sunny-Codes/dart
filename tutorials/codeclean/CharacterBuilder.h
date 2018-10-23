@@ -33,7 +33,7 @@ void changeRestPosition(SkeletonPtr skel, double delta);
 void changeStiffness(SkeletonPtr skel, double delta);
 void changeDamping(SkeletonPtr skel, double delta);
 void setPosition(SkeletonPtr skel, VectorXd def_pos);
-void setCollidable(SkeletonPtr skel);
+void setCollidableFalse(SkeletonPtr skel);
 
 
 #endif

@@ -1,4 +1,4 @@
-#include "MyWorld.h"
+/*#include "MyWorld.h"
 
 
 /// Constructor
@@ -60,7 +60,6 @@ void MyWorld::timeStepping()
 ///// functions needed in simulation (main)
 
 
-/*
 void MyWorld::printKeyboardInstruction(){
     cout << "space bar: simulation on/off" << endl;
     cout << "'p': replay simulation" << endl;
@@ -183,10 +182,9 @@ void MyWorld::keyboard(unsigned char key, int x, int y)
         }
     }
 }
-*/
 
 bool MyWorld::doRender(){
     return render;
 }
 
-
+*/

@@ -12,6 +12,7 @@ BodyNode* LowerBodyBuilder::addBody_default (
 SkeletonPtr LowerBodyBuilder::buildBody(string name){
     SkeletonPtr skel = Skeleton::create(name);
 
+
     // Add each body to the last BodyNode in the skel
     BodyNode* root = makeTranslational2DRootBody(skel, "root", draw, bone_geometry[0], bone_geometry[2], Vector2d(0,0), stiffness, damping);
     BodyNode *bn_t= addBody(skel, root, "torso", V3_Zero, Vector3d(0,0,M_PI), draw, bone_geometry, rest_position, stiffness, damping);
@@ -19,7 +20,8 @@ SkeletonPtr LowerBodyBuilder::buildBody(string name){
     double default_width= bone_geometry[0];
     double default_height= bone_geometry[1];
     double default_depth= bone_geometry[2];
- 
+     cout<<"bone_geometry:"<<default_width<<",  "<<default_height<<", "<<default_depth<<endl;
+
     BodyNode * bn_l = addBody(skel, root, "leg_l1", V3_Zero, V3_Zero, draw, bone_geometry, rest_position, stiffness, damping);
     bn_l = addBody_default(skel, bn_l, "leg_l2");
     bn_l = addBody(skel, bn_l, "leg_l3", 

@@ -1,138 +1,189 @@
 #include "MyWindow.h"
+MyWindow::MyWindow(WorldPtr _mWorld, FSM* fsm){
+    render=true;
+    //mWorld= _mWorld;
+    //mWindow=dart::gui::SimWindow() ;
+    setWorld(_mWorld);
+    
+    mFSM= fsm;
+    mCharacter= mWorld->getSkeleton("character"); //world->getSkeleton("character");
+    if(render) mGoalVisualize= mWorld->getSkeleton("goal"); //world->getSkeleton("goal");
+    //mCharacter = mCharacter->getSkeletonPtr(); //world->getSkeleton("character");
+    assert(mCharacter != nullptr);
+    mController= new Controller(mCharacter, 300, 30, mFSM);
+
+    mController->mForceCountDown.resize(mCharacter->getNumDofs(), 0);
+    ArrowShape::Properties arrow_properties;
+    arrow_properties.mRadius = 0.05;
+    mController->mArrow = std::shared_ptr<ArrowShape>(new ArrowShape(
+                Vector3d(-default_height, 0.0, default_height / 2.0),
+                Vector3d(-default_width / 2.0, 0.0, default_height / 2.0),
+                arrow_properties, dart::Color::Orange(1.0)));
+    cout<<"render: "<<render<<endl;
+}
 
 /// Handle keyboard input
 void MyWindow::keyboard(unsigned char key, int x, int y) 
 {
-    mWorld->keyboard(key, x, y);
-    /*    switch(key)
-    {
-        case '-':
-            mWorld->getController()->changeForceDirection();
-            break;
+    if(render){   
+        switch(key)
+        {
+            case '-':
+                mController->changeForceDirection();
+                break;
+            case '1':
+                mController->applyForce(0);
+                break;
+            case '2':
+                mController->applyForce(1);
+                break;
+            case '3':
+                mController->applyForce(2);
+                break;
+            case '4':
+                mController->applyForce(3);
+                break;
+            case '5':
+                mController->applyForce(4);
+                break;
+            case '6':
+                mController->applyForce(5);
+                break;
+            case '7':
+                mController->applyForce(6);
+                break;
+            case '8':
+                mController->applyForce(7);
+                break;
+            case '9':
+                mController->applyForce(8);
+                break;
+            case '0':
+                mController->applyPDForces(goalPos);
+                break;
+            case '/':
+                mController->changePDmode();
+                cout<<"PD mode now: ";
+                if(mController->usePDcontrol()) cout<<"true"<<endl;
+                else cout<<"false"<<endl;
+                break;
+            case 'n':
+                if(!mFSM->isAutomode()){ // go to next state
+                    cur_p_idx= (cur_p_idx+1)% P_NUM;
+                    goalPos= goalPoses.col(cur_p_idx);
+                    cout<<"State: "<<cur_p_idx<<endl;
+                }else{
+                    cout<<"'n' pressed, but now in automode"<<endl;
+                }
+                break;
+            case 'c':
+                //change the mode
+                mFSM->change_automode();
+                cout<<"automode: ";
+                if(mFSM->isAutomode())cout<<"true"<<endl;
+                else cout<<"false"<<endl;
+                break;
+            case 'q':
+                changeRestPosition(mCharacter, delta_rest_position);
+                break;
+            case 'a':
+                changeRestPosition(mCharacter, -delta_rest_position);
+                break;
 
-        case '1':
-            mWorld->getController()->applyForce(0);
-            break;
-        case '2':
-            mWorld->getController()->applyForce(1);
-            break;
-        case '3':
-            mWorld->getController()->applyForce(2);
-            break;
-        case '4':
-            mWorld->getController()->applyForce(3);
-            break;
-        case '5':
-            mWorld->getController()->applyForce(4);
-            break;
-        case '6':
-            mWorld->getController()->applyForce(5);
-            break;
-        case '7':
-            mWorld->getController()->applyForce(6);
-            break;
-        case '8':
-            mWorld->getController()->applyForce(7);
-            break;
-        case '9':
-            mWorld->getController()->applyForce(8);
-            break;
-        case '0':
-            mWorld->getController()->applyPDForces(goalPos);
-            break;
-        case '/':
-            mWorld->getController()->changePDmode();
-            cout<<"PD mode now: ";
-            if(mWorld->getController()->usePDcontrol()) cout<<"true"<<endl;
-            else cout<<"false"<<endl;
-            break;
-        case 'n':
-            if(!mWorld->getFSM()->isAutomode()){ // go to next state
-                cur_p_idx= (cur_p_idx+1)% P_NUM;
-                goalPos= goalPoses.col(cur_p_idx);
-                cout<<"State: "<<cur_p_idx<<endl;
-            }else{
-                cout<<"'n' pressed, but now in automode"<<endl;
-            }
-            break;
-        case 'c':
-            //change the mode
-            mWorld->getFSM()->change_automode();
-            cout<<"automode: ";
-            if(mWorld->getFSM()->isAutomode())cout<<"true"<<endl;
-            else cout<<"false"<<endl;
-            break;
-        case 'q':
-            changeRestPosition(mWorld->getCharacter(), delta_rest_position);
-            break;
-        case 'a':
-            changeRestPosition(mWorld->getCharacter(), -delta_rest_position);
-            break;
+            case 'w':
+                changeStiffness(mCharacter, delta_stiffness);
+                break;
+            case 's':
+                changeStiffness(mCharacter, -delta_stiffness);
+                break;
 
-        case 'w':
-            changeStiffness(mWorld->getCharacter(), delta_stiffness);
-            break;
-        case 's':
-            changeStiffness(mWorld->getCharacter(), -delta_stiffness);
-            break;
-
-        case 'e':
-            changeDamping(mWorld->getCharacter(), delta_damping);
-            break;
-        case 'd':
-            changeDamping(mWorld->getCharacter(), -delta_damping);
-            break;
-        case 'f':
-            mWorld->getController()->changeBodyForce();
-            //mBodyForce = !mBodyForce;
-            break;
-        case 'h':
-            // hide the goal pendulum
-            //hide= !hide;
-            //if(render) setHideOrShow(mGoalVisualize, hide);
-            if(render){
+            case 'e':
+                changeDamping(mCharacter, delta_damping);
+                break;
+            case 'd':
+                changeDamping(mCharacter, -delta_damping);
+                break;
+            case 'f':
+                mController->changeBodyForce();
+                //mBodyForce = !mBodyForce;
+                break;
+                /*
+                   case 'h':
+                // hide the goal pendulum
+                //hide= !hide;
+                //if(render) setHideOrShow(mGoalVisualize, hide);
+                if(render){
                 hide= !hide;
-                setHideOrShow(mWorld->getGoalVisualize(), hide);
+                setHideOrShow(mGoalVisualize, hide);
                 //mGoalVisualize=nullptr;
                 //render=false;
-            }
-            break;
+                }
+                break;
+                */
+            default:
+                SimWindow::keyboard(key, x, y); //Simwindow::
+        }
 
-        default:
-            SimWindow::keyboard(key, x, y); //Simwindow::
     }
-*/
 }
+
+
+bool MyWindow::useRender(){
+    return render;
+}
+SkeletonPtr MyWindow::getCharacter()
+{
+    return mCharacter;
+}
+
+SkeletonPtr MyWindow::getGoalVisualize()
+{
+    return mGoalVisualize;
+}
+
+FSM* MyWindow::getFSM(){
+    return mFSM;
+}
+Controller* MyWindow::getController(){
+    return mController;
+}
+
 
 void MyWindow::timeStepping(){
 
-    mWorld->timeStepping();
+    mController->timeStepping(render);
     
-    SkeletonPtr wCharacter= mWorld->getCharacter();
-    
-    for(std::size_t i = 0; i < wCharacter->getNumBodyNodes(); ++i)
-    {
-        BodyNode* bn = wCharacter->getBodyNode(i);
-        auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
-        //for(std::size_t j = 0; j < 1; ++j)
+    if (render){
 
-        visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
-        if(visualShapeNodes.size()>1){
-            visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
-        }       
-
-        // If we have three visualization shapes, that means the arrow is
-        // attached. We should remove it in case this body is no longer
-        // experiencing a force
-        if(visualShapeNodes.size() == 3u)
+        for(std::size_t i = 0; i < mCharacter->getNumBodyNodes(); ++i)
         {
-            assert(visualShapeNodes[2]->getShape() == wCharacter->mArrow);
-            visualShapeNodes[2]->remove();
-        }
-    }
+            BodyNode* bn = mCharacter->getBodyNode(i);
+            auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
+            //for(std::size_t j = 0; j < 1; ++j)
 
-    SimWindow::timeStepping();
- 
+            visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
+            if(visualShapeNodes.size()>1){
+                visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
+            }       
+
+            // If we have three visualization shapes, that means the arrow is
+            // attached. We should remove it in case this body is no longer
+            // experiencing a force
+            if(visualShapeNodes.size() == 3u)
+            {
+                assert(visualShapeNodes[2]->getShape() == mCharacter->mArrow);
+                visualShapeNodes[2]->remove();
+            }
+        }
+
+        SimWindow::timeStepping();
+        
+        mController->setGoalPos(mFSM->timeStepping()) ; // *mController);
+        setPosition(mGoalVisualize, mFSM->get_goalPos());
+        //
+
+
+    }
 }
 
 void MyWindow::printKeyboardInstruction(){
@@ -197,7 +248,7 @@ int main(int argc, char* argv[])
     SkeletonPtr goal= lbb.buildBody("goal");
     setPosition(character, goalPos_0);
     setPosition(goal, goalPos);
-    setCollidable(goal);
+    setCollidableFalse(goal);
     
     /*
     //'TODO' need to make goal without any skel-> convert it to character if needed
@@ -208,22 +259,18 @@ int main(int argc, char* argv[])
     */
 
     // Create a world and add the pendulum to the world
-    World* world= new MyWorld(&fsm); //std::make_shared<MyWorld>(&fsm);
-
-    //MyWorld world= MyWorld(&fsm);
+    WorldPtr world= std::make_shared<World>();
 
     world->addSkeleton(character);
     world->addSkeleton(goal);
     world->addSkeleton(createFloor());
     world->setGravity(Vector3d(0,-9.8,0));
-    // Create a window for rendering the world and handling user input
-    //MyWorld dartWorld(world, &fsm); //, &character_lb);
 
-   // Initialize glut, initialize the window, and begin the glut event loop
-    MyWindow mWindow(world);
-    mWindow.printKeyboardInstruction();
+    MyWindow window(world, &fsm);
+    // Initialize glut, initialize the window, and begin the glut event loop
+    window.printKeyboardInstruction();
     glutInit(&argc, argv);
-    mWindow.initWindow(1080, 810, "2D walking body");
+    window.initWindow(1080, 810, "2D walking body");
     glutMainLoop();
 
 }

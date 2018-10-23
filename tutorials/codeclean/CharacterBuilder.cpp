@@ -50,7 +50,7 @@ void setPosition(SkeletonPtr skel, VectorXd def_pos){
     }
 }
 
-void setCollidable(SkeletonPtr skel){
+void setCollidableFalse(SkeletonPtr skel){
     for (int i=0;i<skel->getNumBodyNodes();i++){
         skel->getBodyNode(i)->setCollidable(false);
     }
