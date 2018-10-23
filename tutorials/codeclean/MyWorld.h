@@ -59,17 +59,22 @@ VectorXd goalPos_1(tot_dof);
 VectorXd goalPos_2(tot_dof);
 VectorXd goalPos_3(tot_dof);
 
-class MyWorld
+class MyWorld : public dart::simulation::World
 {
     public:
 
         /// Constructor
-        MyWorld(WorldPtr world, FSM* fsm); // Character *character);
-        void keyboard(unsigned char key, int x, int y); // override;
+        MyWorld(FSM* fsm);
+        // MyWorld(WorldPtr world, FSM* fsm); // Character *character);
+        // void keyboard(unsigned char key, int x, int y); // override;
         void timeStepping();// override;
-        void printKeyboardInstruction();
-        dart::gui::SimWindow mWindow;
-         
+        // void printKeyboardInstruction();
+        // dart::gui::SimWindow mWindow;
+        SkeletonPtr getCharacter();
+        SkeletonPtr getGoalVisualize();
+        FSM* getFSM();
+        Controller* getController();
+
         bool doRender();
 
     protected:

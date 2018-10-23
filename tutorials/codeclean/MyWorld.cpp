@@ -2,16 +2,16 @@
 
 
 /// Constructor
-MyWorld::MyWorld(WorldPtr world, FSM* fsm)// Character *character)
+MyWorld::MyWorld(FSM* fsm)//WorldPtr world,  Character *character)
     :hide(false)
 {
     render=true;
-    mWindow=dart::gui::SimWindow() ;
-    mWindow.setWorld(world);
+    //mWindow=dart::gui::SimWindow() ;
+    //mWindow.setWorld(world);
     
     mFSM= fsm;
-    mCharacter= world->getSkeleton("character");
-    if(render) mGoalVisualize= world->getSkeleton("goal");
+    mCharacter= getSkeleton("character"); //world->getSkeleton("character");
+    if(render) mGoalVisualize= getSkeleton("goal"); //world->getSkeleton("goal");
     //mCharacter = mCharacter->getSkeletonPtr(); //world->getSkeleton("character");
     assert(mCharacter != nullptr);
     mController= new Controller(mCharacter, 300, 30, mFSM);
@@ -25,39 +25,33 @@ MyWorld::MyWorld(WorldPtr world, FSM* fsm)// Character *character)
                 arrow_properties, dart::Color::Orange(1.0)));
 }
 
+SkeletonPtr MyWorld::getCharacter()
+{
+return mCharacter;
+}
+
+
+SkeletonPtr MyWorld::getGoalVisualize()
+{
+return mGoalVisualize;
+}
+
+FSM* MyWorld::getFSM(){
+    return mFSM;
+}
+Controller* MyWorld::getController(){
+    return mController;
+}
+
+
+
 void MyWorld::timeStepping() 
 {
     mController->timeStepping(render);
 
-    //if(render) mWindow.timeStepping();
-    if(render){
-        for(std::size_t i = 0; i < mCharacter->getNumBodyNodes(); ++i)
-        {
-            BodyNode* bn = mCharacter->getBodyNode(i);
-            auto visualShapeNodes = bn->getShapeNodesWith<VisualAspect>();
-            //for(std::size_t j = 0; j < 1; ++j)
-
-            visualShapeNodes[0]->getVisualAspect()->setColor(dart::Color::Green());
-            if(visualShapeNodes.size()>1){
-                visualShapeNodes[1]->getVisualAspect()->setColor(dart::Color::Orange());
-            }       
-
-            // If we have three visualization shapes, that means the arrow is
-            // attached. We should remove it in case this body is no longer
-            // experiencing a force
-            if(visualShapeNodes.size() == 3u)
-            {
-                assert(visualShapeNodes[2]->getShape() == mController->mArrow);
-                visualShapeNodes[2]->remove();
-            }
-        }
-        mWindow.timeStepping(); //SimWindow::
-    }
-    
     // Step the simulation forward
     mController->setGoalPos(mFSM->timeStepping()) ; // *mController);
     setPosition(mGoalVisualize, mFSM->get_goalPos());
-
 
 }
 
@@ -66,7 +60,7 @@ void MyWorld::timeStepping()
 ///// functions needed in simulation (main)
 
 
-
+/*
 void MyWorld::printKeyboardInstruction(){
     cout << "space bar: simulation on/off" << endl;
     cout << "'p': replay simulation" << endl;
@@ -184,84 +178,15 @@ void MyWorld::keyboard(unsigned char key, int x, int y)
                     //render=false;
                 }
                 break;
-            default:
-                mWindow.keyboard(key, x, y); //Simwindow::
+            //default:
+                //mWindow.keyboard(key, x, y); //Simwindow::
         }
     }
 }
+*/
+
 bool MyWorld::doRender(){
     return render;
-}
-
-int main(int argc, char* argv[])
-    //void simulation()
-{
-
-    VectorXd def_pos(9);
-    //def_pos<< 0, 0, 180*M_PI/180.0, 0, 0, 90*M_PI/180.0, 0,0, 90*M_PI/180.0;
-
-    def_pos<< 0,0,0,0,0,0,0,0,0;
-    //0,2 stance, 1,3 foot strike
-    //0: 012 swh swk swa sth* stk sta 
-    goalPos_0<< 0, 0, 0, 0.4, -1.1, 0.2, 0, -0.05, 0.2;
-    goalPos_1<< 0, 0, 0, -0.7, -0.05, 0.2, 0, -0.1, 0.2;
-    goalPos_2<< 0, 0, 0, 0, -0.05, 0.2, 0.4, -1.1, 0.2;
-    goalPos_3<< 0, 0, 0, 0, -0.1, 0.2, -0.7, -0.05, 0.2;
-
-    FSM_state s0 (300, 9, goalPos_0);
-    FSM_state s1 (30, 9, goalPos_1);
-    FSM_state s2 (300, 9, goalPos_2);
-    FSM_state s3 (30, 9, goalPos_3);
-
-    FSM fsm=FSM();
-    fsm.add_state(s0);
-    fsm.add_state(s1);
-    fsm.add_state(s2);
-    fsm.add_state(s3);
-    fsm.add_transition(transition(0, 0, 1));
-    fsm.add_transition(transition(1, 0, 2));
-    fsm.add_transition(transition(2, 0, 3));
-    fsm.add_transition(transition(3, 0, 0));
-    fsm.set_start();
-
-    fsm.print_fsm();
-    goalPoses << goalPos_0, goalPos_1, goalPos_2, goalPos_3;
-    cur_p_idx=1;
-    goalPos= goalPoses.col(cur_p_idx); //goalPos_1;
-
-    LowerBodyBuilder lbb(true, default_stiffness, default_damping, default_rest_position);
-    lbb.setBoneGeometry(Vector3d(default_width, default_height, default_depth));
-    SkeletonPtr character= lbb.buildBody("character");
-    SkeletonPtr goal= lbb.buildBody("goal");
-    setPosition(character, goalPos_0);
-    setPosition(goal, goalPos);
-    setCollidable(goal);
-        /*
-    //'TODO' need to make goal without any skel-> convert it to character if needed
-    LowerBody goal_lb("goal", true, default_stiffness, default_damping, default_rest_position);
-    goal_lb.setBoneGeometry(Vector3d(default_width, default_height, default_depth));
-    SkeletonPtr goal= goal_lb.buildBody();
-    goal_lb.setPosition(goalPos);
-    */
-
-    // Create a world and add the pendulum to the world
-    WorldPtr world= std::make_shared<World>();
-
-    world->addSkeleton(character);
-    world->addSkeleton(goal);
-    world->addSkeleton(createFloor());
-    world->setGravity(Vector3d(0,-9.8,0));
-    // Create a window for rendering the world and handling user input
-    MyWorld dartWorld(world, &fsm); //, &character_lb);
-
-   // Initialize glut, initialize the window, and begin the glut event loop
-    
-   //if(world.doRender()){
-        dartWorld.printKeyboardInstruction();
-        glutInit(&argc, argv);
-        dartWorld.mWindow.initWindow(1080, 810, "2D walking body");
-        glutMainLoop();
-   // }
 }
 
 
