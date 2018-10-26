@@ -1,15 +1,15 @@
 #ifndef __CONTROLLER_H__
 #define __CONTROLLER_H__
 
-#include "fsm.h"
 #include <dart/dart.hpp>
 #include <dart/gui/gui.hpp>
+
+#include "fsm.h"
 
 using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace std;
 using namespace Eigen;
-
 const double default_torque = 15.0; // N-m
 const double default_force =  15.0; // N
 const int default_countdown = 200;  // Number of timesteps for applying force
@@ -57,5 +57,4 @@ class Controller{
         FSM * mFSM;
 
 };
-
 #endif

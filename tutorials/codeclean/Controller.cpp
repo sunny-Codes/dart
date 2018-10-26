@@ -1,5 +1,4 @@
 #include "Controller.h"
-
 void Controller::timeStepping(bool render){
     if(mPDmode){
         applyPDForces(mGoalPos);
@@ -120,4 +119,3 @@ void Controller::applyForce(std::size_t index)
     if(index < mForceCountDown.size())
         mForceCountDown[index] = default_countdown;
 }
-
