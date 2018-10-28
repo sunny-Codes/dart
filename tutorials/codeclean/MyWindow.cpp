@@ -178,12 +178,10 @@ void MyWindow::timeStepping(){
 
         SimWindow::timeStepping();
         
-        mController->setGoalPos(mFSM->timeStepping()) ; // *mController);
         setPosition(mGoalVisualize, mFSM->get_goalPos());
-        //
-
-
     }
+    mController->setGoalPos(mFSM->timeStepping()) ; // *mController);
+
 }
 
 void MyWindow::printKeyboardInstruction(){
